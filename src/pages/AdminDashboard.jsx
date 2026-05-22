@@ -5,7 +5,7 @@ import AdminTransactions from './AdminTransactions';
 import AdminStoreTransactions from './AdminStoreTransactions';
 import AdminBranches from './AdminBranches';
 import AdminDashboardMain from './AdminDashboardMain';
-import User from './user';
+import User from './User';
 import AdminContacts from './AdminContacts';
 import LogoutModal from '../components/LogoutModal';
 import MobileHeader from '../components/MobileHeader';
