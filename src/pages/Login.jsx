@@ -99,7 +99,7 @@ function Login() {
             {/* Email / Username */}
             <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">
-                Username
+                Email
               </label>
               <input
                 type="email"
