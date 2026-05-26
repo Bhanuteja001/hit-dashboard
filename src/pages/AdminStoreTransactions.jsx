@@ -7,6 +7,7 @@ import api from '../api/axios';
 import { useToast } from '../components/Toast';
 import Pagination from '../components/Pagination';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import Loader from '../components/Loader';
 
 // ── Pagination constant ───────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
@@ -46,6 +47,7 @@ const AdminStoreTransactions = () => {
 
   const [transactions, setTransactions]       = useState([]);
   const [stores, setStores]                   = useState([]);
+  const [isLoading, setIsLoading]             = useState(true);
   const [isFormOpen, setIsFormOpen]           = useState(false);
   const [editingTxn, setEditingTxn]           = useState(null); // id of txn being edited
   const [serverError, setServerError]         = useState('');
@@ -121,6 +123,7 @@ const AdminStoreTransactions = () => {
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchAll = async (silent = false, activeRef = { current: true }) => {
+    if (!silent) setIsLoading(true);
     try {
       // 1. Fetch stores
       const storeRes  = await api.get('/stores');
@@ -164,6 +167,8 @@ const AdminStoreTransactions = () => {
       if (!activeRef.current) return;
       console.error(err);
       toast.error(err.response?.data?.message || err.message || 'Failed to fetch store transactions');
+    } finally {
+      if (activeRef.current && !silent) setIsLoading(false);
     }
   };
 
@@ -577,7 +582,13 @@ const AdminStoreTransactions = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800 text-sm">
-                {paginated.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="6" className="py-4">
+                      <Loader message="Loading transactions..." />
+                    </td>
+                  </tr>
+                ) : paginated.length > 0 ? (
                   paginated.map((trxn, idx) => (
                     <tr key={trxn.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-3 px-3 text-gray-500 text-xs text-center font-medium">
@@ -652,7 +663,9 @@ const AdminStoreTransactions = () => {
         {/* Mobile View (under lg) */}
         <div className="block lg:hidden">
           <div className="space-y-4">
-            {paginated.length > 0 ? (
+            {isLoading ? (
+              <Loader message="Loading transactions..." />
+            ) : paginated.length > 0 ? (
               paginated.map((trxn, idx) => (
                 <div key={trxn.id} className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-md hover:border-gray-700 transition-all">
                   <div className="flex justify-between items-start gap-2">

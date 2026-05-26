@@ -7,6 +7,7 @@ import api from '../api/axios';
 import { useToast } from '../components/Toast';
 import Pagination from '../components/Pagination';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import Loader from '../components/Loader';
 
 // ── Pagination constant ───────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
@@ -41,6 +42,7 @@ const User = () => {
   const toast = useToast();
 
   const [users, setUsers]               = useState([]);
+  const [isLoading, setIsLoading]       = useState(true);
   const [isFormOpen, setIsFormOpen]     = useState(false);
   const [editingUser, setEditingUser]   = useState(null);
   const [showPassword, setShowPassword] = useState({});
@@ -66,6 +68,7 @@ const User = () => {
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchUsers = async (silent = false, activeRef = { current: true }) => {
+    if (!silent) setIsLoading(true);
     try {
       const res = await api.get('/auth/users');
       if (!activeRef.current) return;
@@ -85,6 +88,8 @@ const User = () => {
       if (!activeRef.current) return;
       console.error(err);
       toast.error(err.response?.data?.message || err.message || 'Failed to fetch users');
+    } finally {
+      if (activeRef.current && !silent) setIsLoading(false);
     }
   };
 
@@ -317,7 +322,13 @@ const User = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800 text-sm">
-                {paginated.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="7" className="py-4 text-center">
+                      <Loader message="Loading users..." />
+                    </td>
+                  </tr>
+                ) : paginated.length > 0 ? (
                   paginated.map((u, index) => (
                     <tr key={u.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-4 px-6 text-gray-400 font-medium text-center">
@@ -411,7 +422,9 @@ const User = () => {
         {/* Mobile View (under lg) */}
         <div className="block lg:hidden">
           <div className="space-y-4">
-            {paginated.length > 0 ? (
+            {isLoading ? (
+              <Loader message="Loading users..." />
+            ) : paginated.length > 0 ? (
               paginated.map((u, index) => (
                 <div 
                   key={u.id} 

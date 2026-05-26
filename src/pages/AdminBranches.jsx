@@ -6,6 +6,7 @@ import { z } from 'zod';
 import api from '../api/axios';
 import { useToast } from '../components/Toast';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import Loader from '../components/Loader';
 
 const BranchSchema = z.object({
   branchName: z.string().min(1, 'Branch name is required'),
@@ -31,6 +32,7 @@ const inputCls = (hasError) =>
 const AdminBranches = () => {
   const toast = useToast();
   const [branches, setBranches] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -48,6 +50,7 @@ const AdminBranches = () => {
   });
 
   const fetchBranches = async () => {
+    setIsLoading(true);
     try {
       setFetchError('');
       const res = await api.get('/stores');
@@ -61,6 +64,8 @@ const AdminBranches = () => {
     } catch (err) {
       console.error(err);
       setFetchError(err.response?.data?.message || err.message || 'Failed to load branches');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -246,7 +251,13 @@ const AdminBranches = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800 text-sm">
-                {branches.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="5" className="py-4">
+                      <Loader message="Loading branches..." />
+                    </td>
+                  </tr>
+                ) : branches.length > 0 ? (
                   branches.map((b, index) => (
                     <tr key={b.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-4 px-6 text-gray-400 font-medium">{index + 1}</td>
@@ -291,7 +302,9 @@ const AdminBranches = () => {
 
         {/* Mobile View (under lg) */}
         <div className="block lg:hidden space-y-4">
-          {branches.length > 0 ? (
+          {isLoading ? (
+            <Loader message="Loading branches..." />
+          ) : branches.length > 0 ? (
             branches.map((b, index) => (
               <div key={b.id} className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-4 sm:p-5 space-y-3 shadow-md hover:border-gray-700 transition-all animate-fade-in">
                 <div className="flex justify-between items-start gap-2">

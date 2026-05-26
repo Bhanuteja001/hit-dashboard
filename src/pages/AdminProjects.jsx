@@ -7,6 +7,7 @@ import api from '../api/axios';
 import { useToast } from '../components/Toast';
 import Pagination from '../components/Pagination';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import Loader from '../components/Loader';
 
 // ── Pagination constant ───────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
@@ -62,6 +63,7 @@ const AdminProjects = () => {
   const toast = useToast();
 
   const [projects, setProjects]               = useState([]);
+  const [isLoading, setIsLoading]             = useState(true);
   const [isFormOpen, setIsFormOpen]           = useState(false);
   const [editingProject, setEditingProject]   = useState(null);
   const [serverError, setServerError]         = useState('');
@@ -106,6 +108,7 @@ const AdminProjects = () => {
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchProjects = async (silent = false, activeRef = { current: true }) => {
+    if (!silent) setIsLoading(true);
     try {
       const res = await api.get('/projects');
       if (!activeRef.current) return;
@@ -143,6 +146,8 @@ const AdminProjects = () => {
       if (!activeRef.current) return;
       console.error(err);
       toast.error(err.response?.data?.message || err.message || 'Failed to fetch projects');
+    } finally {
+      if (activeRef.current && !silent) setIsLoading(false);
     }
   };
 
@@ -426,7 +431,13 @@ const AdminProjects = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800 text-sm">
-                {paginated.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="13" className="py-4">
+                      <Loader message="Loading projects..." />
+                    </td>
+                  </tr>
+                ) : paginated.length > 0 ? (
                   paginated.map((p, idx) => (
                     <tr key={p.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-3 px-3 text-gray-500 text-xs text-center font-medium">
@@ -502,7 +513,9 @@ const AdminProjects = () => {
         {/* Mobile View (under lg) */}
         <div className="block lg:hidden">
           <div className="space-y-4">
-            {paginated.length > 0 ? (
+            {isLoading ? (
+              <Loader message="Loading projects..." />
+            ) : paginated.length > 0 ? (
               paginated.map((p, idx) => (
                 <div key={p.id} className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-md hover:border-gray-700 transition-all">
                   <div className="flex justify-between items-start gap-2">
