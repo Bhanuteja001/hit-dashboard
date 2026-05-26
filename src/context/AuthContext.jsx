@@ -9,11 +9,25 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
+      const token = localStorage.getItem('token');
+      console.log('fetchUser - Token from localStorage:', token ? token.substring(0, 20) + '...' : 'none');
+
+      if (!token) {
+        console.log('No token found, skipping fetch');
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching user data...');
       const res = await api.get('/auth/me');
+      console.log('User data received:', res.data);
       setUser(res.data);
       localStorage.setItem('userRole', res.data.role);
     } catch (err) {
+      console.error('Error fetching user:', err.response?.data || err.message);
       setUser(null);
+      localStorage.removeItem('token');
       localStorage.removeItem('userRole');
     } finally {
       setLoading(false);
@@ -25,7 +39,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
+    console.log('Login called with:', userData);
     setUser(userData);
+
+    if (userData.token) {
+      localStorage.setItem('token', userData.token);
+      console.log('Token saved to localStorage:', userData.token.substring(0, 20) + '...');
+    } else {
+      console.warn('No token in userData:', userData);
+    }
+
     localStorage.setItem('userRole', userData.role);
   };
 
@@ -36,6 +59,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', err);
     } finally {
       setUser(null);
+      localStorage.removeItem('token');
       localStorage.removeItem('userRole');
       sessionStorage.clear();
     }
