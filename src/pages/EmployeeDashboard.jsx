@@ -9,6 +9,7 @@ import LogoutModal from '../components/LogoutModal';
 import MobileHeader from '../components/MobileHeader';
 import Loader from '../components/Loader';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
 
 
 const EmployeeTransactionSchema = z.object({
@@ -37,6 +38,7 @@ const inputCls = (hasError) =>
 function EmployeeDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const toast = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [stores, setStores] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -125,8 +127,11 @@ function EmployeeDashboard() {
       await api.post('/stores/transactions/create', body);
       setIsFormOpen(false);
       fetchUserDataAndTransactions();
+      toast.success('Transaction added successfully');
     } catch (err) {
-      setServerError(err.response?.data?.message || err.message || 'Failed to save store transaction');
+      const msg = err.response?.data?.message || err.message || 'Failed to save store transaction';
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 
