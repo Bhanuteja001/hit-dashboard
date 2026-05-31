@@ -10,14 +10,25 @@ import MobileHeader from '../components/MobileHeader';
 import Loader from '../components/Loader';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
+import Pagination from '../components/Pagination';
 
 
 const EmployeeTransactionSchema = z.object({
   store: z.string().min(1, 'Please select a store'),
-  trxnType: z.enum(['CREDIT', 'DEBIT']),
-  amount: z.string().min(1, 'Amount is required').refine(val => !isNaN(Number(val)) && Number(val) > 0, {
+  creditAmount: z.string().optional().refine(val => !val || (!isNaN(Number(val)) && Number(val) > 0), {
     message: 'Amount must be a positive number',
   }),
+  debitAmount: z.string().optional().refine(val => !val || (!isNaN(Number(val)) && Number(val) > 0), {
+    message: 'Amount must be a positive number',
+  }),
+  description: z.string().optional(),
+}).refine(data => {
+  const hasCredit = data.creditAmount && Number(data.creditAmount) > 0;
+  const hasDebit = data.debitAmount && Number(data.debitAmount) > 0;
+  return hasCredit || hasDebit;
+}, {
+  message: 'Either Credit or Debit amount is required',
+  path: ['creditAmount'],
 });
 
 const FieldError = ({ message }) =>
@@ -46,6 +57,9 @@ function EmployeeDashboard() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [serverError, setServerError] = useState('');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const {
     register,
     handleSubmit,
@@ -55,10 +69,15 @@ function EmployeeDashboard() {
     resolver: zodResolver(EmployeeTransactionSchema),
     defaultValues: {
       store: '',
-      trxnType: 'CREDIT',
-      amount: '',
+      creditAmount: '',
+      debitAmount: '',
+      description: '',
     },
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [transactions.length]);
 
   const fetchUserDataAndTransactions = async () => {
     try {
@@ -80,6 +99,7 @@ function EmployeeDashboard() {
             date: t.createdAt ? t.createdAt.split('T')[0] : '',
             store: store.name,
             trxnType: t.type,
+            description: t.description || '',
             amount: t.amount
           }));
         } catch (err) {
@@ -106,8 +126,9 @@ function EmployeeDashboard() {
     setServerError('');
     reset({
       store: stores.length > 0 ? stores[0].id : '',
-      trxnType: 'CREDIT',
-      amount: '',
+      creditAmount: '',
+      debitAmount: '',
+      description: '',
     });
     setIsFormOpen(true);
   };
@@ -115,19 +136,47 @@ function EmployeeDashboard() {
   const onSubmit = async (data) => {
     setServerError('');
     const selectedStoreObj = stores.find(s => s.id === data.store);
-    const body = {
-      storeId: data.store,
-      type: data.trxnType,
-      title: 'Store Transaction',
-      description: `Store transaction for ${selectedStoreObj ? selectedStoreObj.name : 'Branch'}`,
-      amount: Number(data.amount),
-    };
+
+    const hasCredit = data.creditAmount && Number(data.creditAmount) > 0;
+    const hasDebit = data.debitAmount && Number(data.debitAmount) > 0;
+
+    if (!hasCredit && !hasDebit) {
+      setServerError('Please enter either a Credit amount or a Debit amount.');
+      return;
+    }
+
+    const promises = [];
+    const desc = data.description?.trim() || `Store transaction for ${selectedStoreObj ? selectedStoreObj.name : 'Branch'}`;
+
+    if (hasCredit) {
+      promises.push(
+        api.post('/stores/transactions/create', {
+          storeId: data.store,
+          type: 'CREDIT',
+          title: 'Store Transaction',
+          description: desc,
+          amount: Number(data.creditAmount),
+        })
+      );
+    }
+
+    if (hasDebit) {
+      promises.push(
+        api.post('/stores/transactions/create', {
+          storeId: data.store,
+          type: 'DEBIT',
+          title: 'Store Transaction',
+          description: desc,
+          amount: Number(data.debitAmount),
+        })
+      );
+    }
 
     try {
-      await api.post('/stores/transactions/create', body);
+      await Promise.all(promises);
       setIsFormOpen(false);
       fetchUserDataAndTransactions();
-      toast.success('Transaction added successfully');
+      toast.success('Transaction(s) added successfully');
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to save store transaction';
       setServerError(msg);
@@ -147,6 +196,9 @@ function EmployeeDashboard() {
   if (isLoading) {
     return <Loader fullScreen={true} message="Loading Employee Dashboard..." />;
   }
+
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
+  const currentItems = transactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="min-h-screen flex font-sans bg-[#020B1A] text-white animate-fade-in">
@@ -256,28 +308,46 @@ function EmployeeDashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Transaction Type *</label>
-                    <select {...register('trxnType')} className={inputCls(errors.trxnType)}>
-                      <option value="CREDIT">CREDIT</option>
-                      <option value="DEBIT">DEBIT</option>
-                    </select>
-                    <FieldError message={errors.trxnType?.message} />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Amount *</label>
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Credit Amount</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 flex items-center pointer-events-none">
                         <span className="text-gray-500 text-xs sm:text-sm">₹</span>
                       </div>
                       <input
                         type="number"
-                        {...register('amount')}
+                        {...register('creditAmount')}
                         placeholder="0.00"
-                        className={`${inputCls(errors.amount)} pl-7 sm:pl-8`}
+                        className={`${inputCls(errors.creditAmount)} pl-7 sm:pl-8`}
                       />
                     </div>
-                    <FieldError message={errors.amount?.message} />
+                    <FieldError message={errors.creditAmount?.message} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Debit Amount</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 text-xs sm:text-sm">₹</span>
+                      </div>
+                      <input
+                        type="number"
+                        {...register('debitAmount')}
+                        placeholder="0.00"
+                        className={`${inputCls(errors.debitAmount)} pl-7 sm:pl-8`}
+                      />
+                    </div>
+                    <FieldError message={errors.debitAmount?.message} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Description</label>
+                    <textarea
+                      {...register('description')}
+                      rows="3"
+                      placeholder="Transaction details..."
+                      className={inputCls(errors.description)}
+                    />
+                    <FieldError message={errors.description?.message} />
                   </div>
 
                   <div className="pt-4 sm:pt-6 flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 mt-4 sm:mt-6 border-t border-gray-800">
@@ -315,12 +385,13 @@ function EmployeeDashboard() {
                       <th className="py-4 px-6 font-semibold text-gray-400 text-sm uppercase tracking-wider">Date</th>
                       <th className="py-4 px-6 font-semibold text-gray-400 text-sm uppercase tracking-wider">Store</th>
                       <th className="py-4 px-6 font-semibold text-gray-400 text-sm uppercase tracking-wider">Type</th>
+                      <th className="py-4 px-6 font-semibold text-gray-400 text-sm uppercase tracking-wider">Description</th>
                       <th className="py-4 px-6 font-semibold text-gray-400 text-sm uppercase tracking-wider text-right">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800 text-sm">
-                    {transactions.length > 0 ? (
-                      transactions.map((trxn) => (
+                    {currentItems.length > 0 ? (
+                      currentItems.map((trxn) => (
                         <tr key={trxn.id} className="hover:bg-white/5 transition-colors">
                           <td className="py-4 px-6 text-gray-300">{trxn.date}</td>
                           <td className="py-4 px-6">
@@ -336,6 +407,9 @@ function EmployeeDashboard() {
                               {trxn.trxnType}
                             </span>
                           </td>
+                          <td className="py-4 px-6 text-gray-400 max-w-[200px] truncate" title={trxn.description}>
+                            {trxn.description || '-'}
+                          </td>
                           <td className="py-4 px-6 font-semibold text-right text-white">
                             ₹{Number(trxn.amount).toLocaleString('en-IN')}
                           </td>
@@ -343,7 +417,7 @@ function EmployeeDashboard() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" className="py-12 text-center text-gray-500">
+                        <td colSpan="5" className="py-12 text-center text-gray-500">
                           <div className="flex flex-col items-center justify-center">
                             <svg className="w-12 h-12 text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -357,6 +431,14 @@ function EmployeeDashboard() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+                totalItems={transactions.length}
+                pageSize={itemsPerPage}
+                itemName="transactions"
+              />
             </div>
 
             {/* Mobile View (under md) */}
@@ -364,8 +446,8 @@ function EmployeeDashboard() {
               <div className="px-4 py-3 bg-[#010813] border border-gray-800 rounded-2xl flex justify-between items-center">
                 <h2 className="text-base font-semibold text-white">Recent Transactions</h2>
               </div>
-              {transactions.length > 0 ? (
-                transactions.map((trxn) => (
+              {currentItems.length > 0 ? (
+                currentItems.map((trxn) => (
                   <div key={trxn.id} className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-4 space-y-3 shadow-md animate-fade-in">
                     <div className="flex justify-between items-start">
                       <div>
@@ -383,6 +465,14 @@ function EmployeeDashboard() {
                       <span className="text-gray-400">Amount</span>
                       <span className="text-white font-semibold">₹{Number(trxn.amount).toLocaleString('en-IN')}</span>
                     </div>
+                    {trxn.description && (
+                      <div className="pt-2 border-t border-gray-800/60 text-xs">
+                        <span className="text-gray-400 block mb-1">Description</span>
+                        <p className="text-gray-300 bg-[#020B1A] p-2.5 rounded-lg border border-gray-800/40 text-[11px] leading-relaxed">
+                          {trxn.description}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -392,6 +482,18 @@ function EmployeeDashboard() {
                   </svg>
                   <p>No transactions found.</p>
                   <p className="text-xs text-gray-400 mt-1">Click the Add button above to create one.</p>
+                </div>
+              )}
+              {totalPages > 1 && (
+                <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl mt-4 overflow-hidden">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={(page) => setCurrentPage(page)}
+                    totalItems={transactions.length}
+                    pageSize={itemsPerPage}
+                    itemName="transactions"
+                  />
                 </div>
               )}
             </div>
