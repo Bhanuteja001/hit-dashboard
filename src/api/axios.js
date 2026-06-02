@@ -1,9 +1,10 @@
 import axios from "axios";
 
 const baseURL =
-  typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV
-    ? ""
-    : "https://hitzone-backend-three.vercel.app";
+  import.meta.env?.VITE_API_BASE_URL ||
+  "https://hitzone-backend-three.vercel.app";
+
+console.log("[API] baseURL:", baseURL);
 
 const api = axios.create({
   baseURL,
