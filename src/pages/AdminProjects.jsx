@@ -24,10 +24,10 @@ const ProjectSchema = z
     area:               z.string().min(1, 'Area is required'),
     budget:             z.string().min(1, 'Budget is required'),
     startDate:          z.string().min(1, 'Start date is required'),
-    endDate:            z.string().min(1, 'End date is required'),
+    endDate:            z.string().optional(),
     projectDescription: z.string().optional(),
   })
-  .refine((d) => new Date(d.endDate) >= new Date(d.startDate), {
+  .refine((d) => !d.endDate || new Date(d.endDate) >= new Date(d.startDate), {
     message: 'End date must be on or after start date',
     path: ['endDate'],
   });
@@ -114,13 +114,9 @@ const AdminProjects = () => {
       if (!activeRef.current) return;
       const data = res.data;
       const mapped = data.map((p) => {
-        let computedStatus = 'In Progress';
+        let computedStatus = 'Pending';
         if (p.endDate) {
-          const end = new Date(p.endDate);
-          const start = new Date(p.startDate);
-          if (!isNaN(end) && end.getTime() !== start.getTime() && end < new Date()) {
-            computedStatus = 'Completed';
-          }
+          computedStatus = 'Completed';
         }
         return {
           id: p._id,
@@ -232,7 +228,7 @@ const AdminProjects = () => {
       area:               data.area,
       budget:             data.budget,
       startDate:          data.startDate,
-      endDate:            data.endDate,
+      endDate:            data.endDate || null,
       projectDescription: data.projectDescription || '',
     };
 
@@ -370,7 +366,9 @@ const AdminProjects = () => {
 
                 {/* End Date */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">End Date *</label>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">
+                    End Date <span className="text-gray-500 font-normal">(optional)</span>
+                  </label>
                   <input type="date" {...register('endDate')} className={inputCls(errors.endDate)} style={{ colorScheme: 'dark' }} />
                   <FieldError message={errors.endDate?.message} />
                 </div>
@@ -456,6 +454,7 @@ const AdminProjects = () => {
                       <td className="py-3 px-4 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
                           p.status === 'Completed'   ? 'bg-[#00FF00]/20 text-[#00FF00] border border-[#00FF00]/50' :
+                          p.status === 'Pending'     ? 'bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/50' :
                           p.status === 'In Progress' ? 'bg-[#FFFF00]/20 text-[#FFFF00] border border-[#FFFF00]/50' :
                           'bg-gray-500/20 text-gray-400 border-gray-500/50'
                         }`}>
@@ -527,6 +526,7 @@ const AdminProjects = () => {
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold ${
                       p.status === 'Completed'   ? 'bg-[#00FF00]/20 text-[#00FF00] border border-[#00FF00]/50' :
+                      p.status === 'Pending'     ? 'bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/50' :
                       p.status === 'In Progress' ? 'bg-[#FFFF00]/20 text-[#FFFF00] border border-[#FFFF00]/50' :
                       'bg-gray-500/20 text-gray-400 border-gray-500/50'
                     }`}>
