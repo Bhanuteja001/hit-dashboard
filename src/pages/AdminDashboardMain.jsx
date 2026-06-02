@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../api/axios';
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area,
+} from 'recharts';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -8,6 +13,79 @@ const formatDate = (dateStr) => {
   return isNaN(d) ? 'N/A' : d.toISOString().split('T')[0];
 };
 
+// ── Custom Tooltip for Bar / Area charts ──────────────────────────────────────
+const DarkTooltip = ({ active, payload, label, prefix = '' }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[#0f1a2e] border border-gray-700 rounded-xl px-3 py-2 shadow-2xl text-xs">
+      {label && <p className="text-gray-400 mb-1 font-medium">{label}</p>}
+      {payload.map((entry, i) => (
+        <p key={i} style={{ color: entry.color }} className="font-bold">
+          {prefix}{typeof entry.value === 'number' ? entry.value.toLocaleString('en-IN') : entry.value}
+        </p>
+      ))}
+    </div>
+  );
+};
+
+// ── Custom Tooltip for Pie chart ──────────────────────────────────────────────
+const PieTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[#0f1a2e] border border-gray-700 rounded-xl px-3 py-2 shadow-2xl text-xs">
+      <p style={{ color: payload[0].payload.color }} className="font-bold">
+        {payload[0].name}: {payload[0].value}
+      </p>
+    </div>
+  );
+};
+
+// ── Compute chart data from projects list ─────────────────────────────────────
+const buildChartData = (projects) => {
+  if (!projects.length) return { statusData: [], budgetData: [], monthlyData: [] };
+
+  // 1. Status breakdown
+  let pending = 0, completed = 0;
+  projects.forEach(p => {
+    if (p.endDate) completed++;
+    else pending++;
+  });
+  const statusData = [
+    { name: 'Pending',   value: pending,   color: '#FF9900' },
+    { name: 'Completed', value: completed, color: '#00FF00' },
+  ].filter(d => d.value > 0);
+
+  // 2. Top-10 projects by budget (bar chart)
+  const budgetData = [...projects]
+    .sort((a, b) => (Number(b.budget) || 0) - (Number(a.budget) || 0))
+    .slice(0, 10)
+    .map(p => ({
+      name: p.projectName.length > 14 ? p.projectName.slice(0, 13) + '…' : p.projectName,
+      budget: Number(p.budget) || 0,
+    }));
+
+  // 3. Projects started per month (last 12 months, area chart)
+  const now = new Date();
+  const monthMap = {};
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+    monthMap[key] = { month: label, projects: 0 };
+  }
+  projects.forEach(p => {
+    if (!p.startDate) return;
+    const d = new Date(p.startDate);
+    if (isNaN(d)) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (monthMap[key]) monthMap[key].projects++;
+  });
+  const monthlyData = Object.values(monthMap);
+
+  return { statusData, budgetData, monthlyData };
+};
+
+// ── Main Component ────────────────────────────────────────────────────────────
 const AdminDashboardMain = () => {
   const [metrics, setMetrics] = useState({
     totalBudget: 0,
@@ -17,7 +95,7 @@ const AdminDashboardMain = () => {
   });
   const [projects, setProjects] = useState([]);
   const [stores, setStores] = useState([]);
-  const [activeModal, setActiveModal] = useState(null); // 'budget' | 'projects' | 'stores' | null
+  const [activeModal, setActiveModal] = useState(null);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -36,23 +114,19 @@ const AdminDashboardMain = () => {
 
         setProjects(projectsList);
         setStores(storesList);
-        setMetrics({
-          totalBudget,
-          projectCount,
-          storeCount,
-          loading: false
-        });
+        setMetrics({ totalBudget, projectCount, storeCount, loading: false });
       } catch (err) {
         console.error('Error fetching dashboard main metrics:', err);
         setMetrics(prev => ({ ...prev, loading: false }));
       }
     };
-
     fetchMetrics();
   }, []);
 
   const closeModal = () => setActiveModal(null);
+  const { statusData, budgetData, monthlyData } = buildChartData(projects);
 
+  // ── Modals ────────────────────────────────────────────────────────────────
   const renderModal = () => {
     if (!activeModal) return null;
 
@@ -105,9 +179,7 @@ const AdminDashboardMain = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan="4" className="py-8 text-center text-gray-500">No projects found.</td>
-                    </tr>
+                    <tr><td colSpan="4" className="py-8 text-center text-gray-500">No projects found.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -157,9 +229,7 @@ const AdminDashboardMain = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan="5" className="py-8 text-center text-gray-500">No projects found.</td>
-                    </tr>
+                    <tr><td colSpan="5" className="py-8 text-center text-gray-500">No projects found.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -191,9 +261,7 @@ const AdminDashboardMain = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan="3" className="py-8 text-center text-gray-500">No branch stores found.</td>
-                    </tr>
+                    <tr><td colSpan="3" className="py-8 text-center text-gray-500">No branch stores found.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -204,11 +272,11 @@ const AdminDashboardMain = () => {
     }
 
     return createPortal(
-      <div 
+      <div
         onClick={closeModal}
         className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[90] p-4 animate-fade-in"
       >
-        <div 
+        <div
           onClick={(e) => e.stopPropagation()}
           className="bg-[#0f1a2e] border border-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh] animate-slide-up"
         >
@@ -241,6 +309,16 @@ const AdminDashboardMain = () => {
     );
   };
 
+  // ── Shared empty-state renderer ───────────────────────────────────────────
+  const NoData = ({ message = 'No data yet — add projects to see charts.' }) => (
+    <div className="flex flex-col items-center justify-center h-40 text-gray-600">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <p className="text-sm text-gray-500">{message}</p>
+    </div>
+  );
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <header className="text-center sm:text-left">
@@ -248,6 +326,7 @@ const AdminDashboardMain = () => {
         <p className="text-gray-400 text-sm mt-1">Welcome back! Here is an overview of the platform status.</p>
       </header>
 
+      {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <button
           onClick={() => setActiveModal('budget')}
@@ -301,6 +380,177 @@ const AdminDashboardMain = () => {
         </button>
       </div>
 
+      {/* ── Analytics Charts ──────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-lg font-bold text-white tracking-tight">Analytics Overview</h2>
+          <span className="h-px flex-1 bg-gray-800" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+
+          {/* 1. Project Status Donut ─────────────────────────────────────────── */}
+          <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-800 bg-[#010813] flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Project Status</h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">Pending vs Completed</p>
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-[#AED500]/10 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#AED500]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+              </div>
+            </div>
+            <div className="p-4">
+              {metrics.loading ? (
+                <div className="h-48 flex items-center justify-center text-gray-500 text-sm animate-pulse">Loading…</div>
+              ) : statusData.length === 0 ? (
+                <NoData />
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.9} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<PieTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Legend */}
+                  <div className="flex justify-center gap-5 mt-1">
+                    {statusData.map(d => (
+                      <div key={d.name} className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-xs text-gray-400">{d.name} <span className="text-white font-bold">{d.value}</span></span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Monthly Project Starts Area Chart ───────────────────────────── */}
+          <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl overflow-hidden lg:col-span-2">
+            <div className="px-5 py-4 border-b border-gray-800 bg-[#010813] flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Projects Over Time</h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">New projects started per month (last 12 months)</p>
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+            <div className="p-4">
+              {metrics.loading ? (
+                <div className="h-48 flex items-center justify-center text-gray-500 text-sm animate-pulse">Loading…</div>
+              ) : projects.length === 0 ? (
+                <NoData />
+              ) : (
+                <ResponsiveContainer width="100%" height={210}>
+                  <AreaChart data={monthlyData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorProjects" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: '#6b7280', fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fill: '#6b7280', fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<DarkTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="projects"
+                      stroke="#6366f1"
+                      strokeWidth={2.5}
+                      fill="url(#colorProjects)"
+                      dot={{ fill: '#6366f1', r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5, fill: '#818cf8', strokeWidth: 0 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Budget Bar Chart ─────────────────────────────────────────────── */}
+        <div className="mt-4 sm:mt-6 bg-[#0f1a2e] border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-800 bg-[#010813] flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-white">Project Budgets</h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">Top 10 projects by budget (₹)</p>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-[#FF9900]/10 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#FF9900]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+          </div>
+          <div className="p-4">
+            {metrics.loading ? (
+              <div className="h-56 flex items-center justify-center text-gray-500 text-sm animate-pulse">Loading…</div>
+            ) : budgetData.length === 0 ? (
+              <NoData />
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={budgetData} margin={{ top: 4, right: 8, left: 10, bottom: 4 }}>
+                  <defs>
+                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor="#AED500" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#AED500" stopOpacity={0.5} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: '#6b7280', fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                  />
+                  <YAxis
+                    tick={{ fill: '#6b7280', fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip content={<DarkTooltip prefix="₹" />} />
+                  <Bar dataKey="budget" fill="url(#barGrad)" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── System Status ─────────────────────────────────────────────────────── */}
       <div className="bg-[#0f1a2e] rounded-2xl shadow-sm border border-gray-800 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-800 bg-[#010813] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-white">System Status</h2>
@@ -312,7 +562,7 @@ const AdminDashboardMain = () => {
             <span className="text-[10px] text-green-400 font-semibold tracking-wider uppercase">All Systems Operational</span>
           </div>
         </div>
-        
+
         <div className="p-6">
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start border-b border-gray-800 pb-6 mb-6">
             <div className="shrink-0 flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20">
