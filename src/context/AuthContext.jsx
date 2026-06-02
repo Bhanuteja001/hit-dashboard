@@ -9,17 +9,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('fetchUser - Token from localStorage:', token ? token.substring(0, 20) + '...' : 'none');
-
-      if (!token) {
-        console.log('No token found, skipping fetch');
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      console.log('Fetching user data...');
+      console.log('Fetching user data (cookie-based auth)...');
       const res = await api.get('/auth/me');
       console.log('User data received:', res.data);
       setUser(res.data);
@@ -38,18 +28,17 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  const login = (userData) => {
+  const login = async (userData) => {
     console.log('Login called with:', userData);
-    setUser(userData);
-
-    if (userData.token) {
+    // If server returned a token (development fallback), persist it so axios can send it in headers
+    if (userData?.token) {
       localStorage.setItem('token', userData.token);
-      console.log('Token saved to localStorage:', userData.token.substring(0, 20) + '...');
-    } else {
-      console.warn('No token in userData:', userData);
+      console.log('Dev token saved to localStorage:', userData.token.substring(0, 20) + '...');
     }
 
-    localStorage.setItem('userRole', userData.role);
+    // Refresh user from server (will use cookie if present, or header if token saved)
+    await fetchUser();
+    if (userData?.role) localStorage.setItem('userRole', userData.role);
   };
 
   const logout = async () => {

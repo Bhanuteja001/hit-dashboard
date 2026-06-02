@@ -127,12 +127,12 @@ function AdminDashboard() {
   return (
     <div className="min-h-screen flex font-sans bg-[#020B1A] text-white animate-fade-in">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#010813] border-r border-gray-800/50 flex-col hidden md:flex">
-        <div className="">
+      <aside className="w-64 bg-[#010813] border-r border-gray-800/50 flex-col hidden md:flex h-screen min-h-0 sticky top-0">
+        <div className="px-4 py-5">
           <img src="/Logo.png" alt="Hit Dashboard Logo" className="w-40 h-auto object-contain mx-auto" />
         </div>
 
-        <nav className="flex-1 px-4 mt-6">
+        <nav className="flex-1 px-4 mt-6 overflow-y-auto min-h-0 pb-4">
           <ul className="space-y-2">
             {menuItems.map((item) => (
               <li key={item.name}>

@@ -42,8 +42,7 @@ const FieldError = ({ message }) =>
   ) : null;
 
 const inputCls = (hasError) =>
-  `w-full border rounded-lg py-1.5 sm:py-2 px-2.5 sm:px-3 bg-[#020B1A] text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-    hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-[#AED500]'
+  `w-full border rounded-lg py-1.5 sm:py-2 px-2.5 sm:px-3 bg-[#020B1A] text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-[#AED500]'
   }`;
 
 function EmployeeDashboard() {
@@ -203,12 +202,12 @@ function EmployeeDashboard() {
   return (
     <div className="min-h-screen flex font-sans bg-[#020B1A] text-white animate-fade-in">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#010813] border-r border-gray-800/50 flex-col hidden md:flex">
-        <div className="">
+      <aside className="w-64 bg-[#010813] border-r border-gray-800/50 flex-col hidden md:flex h-screen min-h-0 sticky top-0">
+        <div className="px-4 py-5">
           <img src="/Logo.png" alt="Hit Dashboard Logo" className="w-40 h-auto object-contain mx-auto" />
         </div>
 
-        <nav className="flex-1 px-4 mt-6">
+        <nav className="flex-1 px-4 mt-6 overflow-y-auto min-h-0 pb-4">
           <ul className="space-y-2">
             <li>
               <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#AED500]/10 text-[#AED500] font-medium transition-colors border border-[#AED500]/20">
@@ -246,7 +245,7 @@ function EmployeeDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto min-h-0">
         {/* Mobile Header */}
         <MobileHeader onLogoutClick={() => setIsLogoutModalOpen(true)} />
 
@@ -268,11 +267,11 @@ function EmployeeDashboard() {
           </header>
 
           {isFormOpen && createPortal(
-            <div 
+            <div
               className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 text-left animate-fade-in"
               onClick={() => setIsFormOpen(false)}
             >
-              <div 
+              <div
                 className="bg-[#0f1a2e] border border-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-slide-up"
                 onClick={(e) => e.stopPropagation()}
               >

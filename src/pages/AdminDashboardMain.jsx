@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../api/axios';
+import Loader from '../components/Loader';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -51,7 +52,7 @@ const buildChartData = (projects) => {
     else pending++;
   });
   const statusData = [
-    { name: 'Pending',   value: pending,   color: '#FF9900' },
+    { name: 'Pending', value: pending, color: '#FF9900' },
     { name: 'Completed', value: completed, color: '#00FF00' },
   ].filter(d => d.value > 0);
 
@@ -167,6 +168,10 @@ const AdminDashboardMain = () => {
   const [stores, setStores] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
 
+  const activeProjects = projects.filter(p => !p.endDate || p.endDate === '');
+  const activeProjectsCount = activeProjects.length;
+  const isDashboardLoading = metrics.loading || financials.loading;
+
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
@@ -178,7 +183,8 @@ const AdminDashboardMain = () => {
         ]);
 
         const projectsList = projectRes.data || [];
-        const projectCount = projectsList.length;
+        const activeProjectsList = projectsList.filter(p => !p.endDate || p.endDate === '');
+        const projectCount = activeProjectsList.length;
         const totalBudget = projectsList.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
 
         const storesList = storeRes.data || [];
@@ -203,6 +209,10 @@ const AdminDashboardMain = () => {
 
   const closeModal = () => setActiveModal(null);
   const { statusData, budgetData, monthlyData } = buildChartData(projects);
+
+  if (isDashboardLoading) {
+    return <Loader fullScreen={true} message="Loading dashboard..." />;
+  }
 
   // ── Modals ────────────────────────────────────────────────────────────────
   const renderModal = () => {
@@ -282,8 +292,8 @@ const AdminDashboardMain = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800">
-                  {projects.length > 0 ? (
-                    projects.map((p, index) => (
+                  {activeProjects.length > 0 ? (
+                    activeProjects.map((p, index) => (
                       <tr key={p._id || index} className="hover:bg-white/5 transition-colors text-xs sm:text-sm">
                         <td className="py-2.5 px-3 sm:py-3.5 sm:px-4 text-gray-400 font-medium text-center">{index + 1}</td>
                         <td className="py-2.5 px-3 sm:py-3.5 sm:px-4 text-white font-semibold">
@@ -307,7 +317,7 @@ const AdminDashboardMain = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan="5" className="py-8 text-center text-gray-500">No projects found.</td></tr>
+                    <tr><td colSpan="5" className="py-8 text-center text-gray-500">No active projects found.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -435,7 +445,7 @@ const AdminDashboardMain = () => {
           <div className="min-w-0">
             <p className="text-xs sm:text-sm font-medium text-gray-400 truncate">Active Projects</p>
             <h3 className="text-xl sm:text-2xl font-bold text-white mt-0.5 truncate">
-              {metrics.loading ? 'Loading...' : `${metrics.projectCount} Projects`}
+              {metrics.loading ? 'Loading...' : `${activeProjectsCount} Projects`}
             </h3>
           </div>
         </button>
@@ -544,7 +554,7 @@ const AdminDashboardMain = () => {
                   <AreaChart data={monthlyData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorProjects" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.35} />
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
                         <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
@@ -601,7 +611,7 @@ const AdminDashboardMain = () => {
                 <BarChart data={budgetData} margin={{ top: 4, right: 8, left: 10, bottom: 4 }}>
                   <defs>
                     <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#AED500" stopOpacity={1} />
+                      <stop offset="0%" stopColor="#AED500" stopOpacity={1} />
                       <stop offset="100%" stopColor="#AED500" stopOpacity={0.5} />
                     </linearGradient>
                   </defs>
@@ -636,11 +646,10 @@ const AdminDashboardMain = () => {
             <p className="text-xs text-gray-500 mt-0.5">Admin gains after combining all project and store credits and debits</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-              financials.netProfit >= 0
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${financials.netProfit >= 0
                 ? 'bg-[#00FF00]/10 text-[#00FF00] border border-[#00FF00]/25'
                 : 'bg-red-500/10 text-red-400 border border-red-500/25'
-            }`}>
+              }`}>
               {financials.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}
             </span>
           </div>
@@ -670,16 +679,14 @@ const AdminDashboardMain = () => {
             </div>
 
             {/* Net Gain / Profit */}
-            <div className={`bg-[#010813]/60 border rounded-xl p-4 transition-colors ${
-              financials.netProfit >= 0
+            <div className={`bg-[#010813]/60 border rounded-xl p-4 transition-colors ${financials.netProfit >= 0
                 ? 'border-[#AED500]/30 hover:border-[#AED500]/50'
                 : 'border-red-500/30 hover:border-red-500/50'
-            }`}>
+              }`}>
               <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Net Profit (Admin Gain)</span>
               <div className="flex items-baseline gap-2 mt-2">
-                <span className={`text-xl sm:text-2xl font-bold ${
-                  financials.netProfit >= 0 ? 'text-[#AED500]' : 'text-red-400'
-                }`}>
+                <span className={`text-xl sm:text-2xl font-bold ${financials.netProfit >= 0 ? 'text-[#AED500]' : 'text-red-400'
+                  }`}>
                   ₹{financials.loading ? '...' : financials.netProfit.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -704,12 +711,12 @@ const AdminDashboardMain = () => {
                     <AreaChart data={financials.monthlyFinanceData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00E4A8" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#00E4A8" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="#00E4A8" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#00E4A8" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#FF3B30" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#FF3B30" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="#FF3B30" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#FF3B30" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />

@@ -46,7 +46,7 @@ function Login() {
       });
 
       const user = res.data;
-      login(user);
+      await login(user);
       toast.success(`Welcome back! Signing you in…`);
 
       if (user.role === 'admin') {
