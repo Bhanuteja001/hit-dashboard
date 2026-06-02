@@ -33,8 +33,8 @@ const PieTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#0f1a2e] border border-gray-700 rounded-xl px-3 py-2 shadow-2xl text-xs">
-      <p style={{ color: payload[0].payload.color }} className="font-bold">
-        {payload[0].name}: {payload[0].value}
+      <p style={{ color: payload[0]?.payload?.color || '#ffffff' }} className="font-bold">
+        {payload[0]?.name}: {payload[0]?.value}
       </p>
     </div>
   );
