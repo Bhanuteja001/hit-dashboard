@@ -85,12 +85,82 @@ const buildChartData = (projects) => {
   return { statusData, budgetData, monthlyData };
 };
 
+// ── Compute financial data from transactions ─────────────────────────────────
+const buildFinancialChartData = (projectTxns, storeTxns) => {
+  const allTxns = [
+    ...projectTxns.map(t => ({ ...t, source: 'project' })),
+    ...storeTxns.map(t => ({ ...t, source: 'store' }))
+  ];
+
+  let totalIncome = 0;
+  let totalExpenses = 0;
+
+  allTxns.forEach(t => {
+    const amt = Number(t.amount) || 0;
+    if (t.type === 'CREDIT') {
+      totalIncome += amt;
+    } else if (t.type === 'DEBIT') {
+      totalExpenses += amt;
+    }
+  });
+
+  const netProfit = totalIncome - totalExpenses;
+
+  // Let's build last 6 months for the area chart
+  const now = new Date();
+  const monthMap = {};
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+    monthMap[key] = { month: label, income: 0, expense: 0, profit: 0 };
+  }
+
+  allTxns.forEach(t => {
+    const dateVal = t.createdAt || t.date;
+    if (!dateVal) return;
+    const d = new Date(dateVal);
+    if (isNaN(d)) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (monthMap[key]) {
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'CREDIT') {
+        monthMap[key].income += amt;
+      } else if (t.type === 'DEBIT') {
+        monthMap[key].expense += amt;
+      }
+    }
+  });
+
+  // Calculate profit per month
+  const monthlyFinanceData = Object.values(monthMap).map(m => ({
+    ...m,
+    profit: m.income - m.expense
+  }));
+
+  // Pie/Donut Chart data
+  const financePieData = [
+    { name: 'Income', value: totalIncome, color: '#00E4A8' },
+    { name: 'Expense', value: totalExpenses, color: '#FF3B30' }
+  ].filter(d => d.value > 0);
+
+  return { totalIncome, totalExpenses, netProfit, monthlyFinanceData, financePieData };
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const AdminDashboardMain = () => {
   const [metrics, setMetrics] = useState({
     totalBudget: 0,
     projectCount: 0,
     storeCount: 0,
+    loading: true
+  });
+  const [financials, setFinancials] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    monthlyFinanceData: [],
+    financePieData: [],
     loading: true
   });
   const [projects, setProjects] = useState([]);
@@ -100,9 +170,11 @@ const AdminDashboardMain = () => {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const [projectRes, storeRes] = await Promise.all([
+        const [projectRes, storeRes, projectTxnsRes, storeTxnsRes] = await Promise.all([
           api.get('/projects'),
-          api.get('/stores')
+          api.get('/stores'),
+          api.get('/projects/transactions/all'),
+          api.get('/stores/transactions/all')
         ]);
 
         const projectsList = projectRes.data || [];
@@ -115,9 +187,15 @@ const AdminDashboardMain = () => {
         setProjects(projectsList);
         setStores(storesList);
         setMetrics({ totalBudget, projectCount, storeCount, loading: false });
+
+        const projectTxns = projectTxnsRes.data || [];
+        const storeTxns = storeTxnsRes.data || [];
+        const finData = buildFinancialChartData(projectTxns, storeTxns);
+        setFinancials({ ...finData, loading: false });
       } catch (err) {
         console.error('Error fetching dashboard main metrics:', err);
         setMetrics(prev => ({ ...prev, loading: false }));
+        setFinancials(prev => ({ ...prev, loading: false }));
       }
     };
     fetchMetrics();
@@ -550,75 +628,160 @@ const AdminDashboardMain = () => {
         </div>
       </div>
 
-      {/* ── System Status ─────────────────────────────────────────────────────── */}
+      {/* ── Financial Profit & Loss Overview ──────────────────────────────────── */}
       <div className="bg-[#0f1a2e] rounded-2xl shadow-sm border border-gray-800 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-800 bg-[#010813] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-white">System Status</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Financial Profit & Loss Overview</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Admin gains after combining all project and store credits and debits</p>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+              financials.netProfit >= 0
+                ? 'bg-[#00FF00]/10 text-[#00FF00] border border-[#00FF00]/25'
+                : 'bg-red-500/10 text-red-400 border border-red-500/25'
+            }`}>
+              {financials.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}
             </span>
-            <span className="text-[10px] text-green-400 font-semibold tracking-wider uppercase">All Systems Operational</span>
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start border-b border-gray-800 pb-6 mb-6">
-            <div className="shrink-0 flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
+        <div className="p-6 space-y-6">
+          {/* Finance Stat Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Total Income */}
+            <div className="bg-[#010813]/60 border border-gray-800/80 rounded-xl p-4 hover:border-gray-700 transition-colors">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total Income (Credits)</span>
+              <div className="flex items-baseline gap-2 mt-2">
+                <span className="text-xl sm:text-2xl font-bold text-[#00E4A8]">
+                  ₹{financials.loading ? '...' : financials.totalIncome.toLocaleString('en-IN')}
+                </span>
+              </div>
             </div>
-            <div className="text-center sm:text-left grow">
-              <h3 className="text-lg font-bold text-white mb-1">Database Connected</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                All microservices and database instances are connected successfully. Secure end-to-end user authentication is active.
-              </p>
+
+            {/* Total Expenses */}
+            <div className="bg-[#010813]/60 border border-gray-800/80 rounded-xl p-4 hover:border-gray-700 transition-colors">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total Expenses (Debits)</span>
+              <div className="flex items-baseline gap-2 mt-2">
+                <span className="text-xl sm:text-2xl font-bold text-[#FF3B30]">
+                  ₹{financials.loading ? '...' : financials.totalExpenses.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Net Gain / Profit */}
+            <div className={`bg-[#010813]/60 border rounded-xl p-4 transition-colors ${
+              financials.netProfit >= 0
+                ? 'border-[#AED500]/30 hover:border-[#AED500]/50'
+                : 'border-red-500/30 hover:border-red-500/50'
+            }`}>
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Net Profit (Admin Gain)</span>
+              <div className="flex items-baseline gap-2 mt-2">
+                <span className={`text-xl sm:text-2xl font-bold ${
+                  financials.netProfit >= 0 ? 'text-[#AED500]' : 'text-red-400'
+                }`}>
+                  ₹{financials.loading ? '...' : financials.netProfit.toLocaleString('en-IN')}
+                </span>
+              </div>
             </div>
           </div>
 
-          <h4 className="text-xs font-semibold text-gray-400 tracking-wider uppercase mb-4">System Performance Metrics</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#010813]/60 border border-gray-800/80 rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition-colors">
-              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">API Latency</span>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-xl sm:text-2xl font-bold text-white">42ms</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-green-500/10 text-green-400 border border-green-500/20">Fast</span>
+          {/* Charts Container */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-gray-800/40">
+            {/* Income vs Expenses Trend Area Chart */}
+            <div className="lg:col-span-2 space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold text-white">Monthly Cash Flow Trend</h4>
+                <p className="text-[10px] text-gray-500">Income vs Expenses (Last 6 Months)</p>
+              </div>
+              <div className="h-[240px]">
+                {financials.loading ? (
+                  <div className="h-full flex items-center justify-center text-gray-500 text-sm animate-pulse">Loading charts...</div>
+                ) : financials.monthlyFinanceData.length === 0 ? (
+                  <NoData message="No transactions available to display trend." />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={financials.monthlyFinanceData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#00E4A8" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#00E4A8" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#FF3B30" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#FF3B30" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        tick={{ fill: '#6b7280', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                      />
+                      <Tooltip content={<DarkTooltip prefix="₹" />} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
+                      <Area type="monotone" name="Income" dataKey="income" stroke="#00E4A8" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" />
+                      <Area type="monotone" name="Expense" dataKey="expense" stroke="#FF3B30" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
-            <div className="bg-[#010813]/60 border border-gray-800/80 rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition-colors">
-              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">CPU Usage</span>
-              <div className="mt-2">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="text-xl sm:text-2xl font-bold text-white">12%</span>
-                  <span className="text-[10px] text-gray-500">Normal</span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-1">
-                  <div className="bg-[#AED500] h-1 rounded-full" style={{ width: '12%' }}></div>
-                </div>
+            {/* Income vs Expenses Distribution Pie/Donut Chart */}
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold text-white">Cash Flow Share</h4>
+                <p className="text-[10px] text-gray-500">Proportion of Credits and Debits</p>
               </div>
-            </div>
-
-            <div className="bg-[#010813]/60 border border-gray-800/80 rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition-colors">
-              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Memory Allocation</span>
-              <div className="mt-2">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="text-xl sm:text-2xl font-bold text-white">48%</span>
-                  <span className="text-[10px] text-gray-500">Optimal</span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-1">
-                  <div className="bg-indigo-500 h-1 rounded-full" style={{ width: '48%' }}></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-[#010813]/60 border border-gray-800/80 rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition-colors">
-              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Network Uptime</span>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-xl sm:text-2xl font-bold text-white">99.98%</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-green-500/10 text-green-400 border border-green-500/20">Stable</span>
+              <div className="h-[240px] flex flex-col justify-center">
+                {financials.loading ? (
+                  <div className="h-full flex items-center justify-center text-gray-500 text-sm animate-pulse">Loading charts...</div>
+                ) : financials.financePieData.length === 0 ? (
+                  <NoData message="No transactions available." />
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <PieChart>
+                        <Pie
+                          data={financials.financePieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={65}
+                          paddingAngle={4}
+                          dataKey="value"
+                          strokeWidth={0}
+                        >
+                          {financials.financePieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.9} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    {/* Legend */}
+                    <div className="flex flex-col gap-2 px-4 mt-2">
+                      {financials.financePieData.map(d => {
+                        const total = financials.totalIncome + financials.totalExpenses;
+                        const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : 0;
+                        return (
+                          <div key={d.name} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                              <span className="text-gray-400">{d.name}</span>
+                            </div>
+                            <span className="text-white font-semibold text-right">
+                              ₹{d.value.toLocaleString('en-IN')} ({pct}%)
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
