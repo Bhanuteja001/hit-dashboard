@@ -141,7 +141,7 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={toast}>
       {children}
       {createPortal(
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0 z-[9999] flex flex-col gap-2 pointer-events-none items-center sm:items-end w-[calc(100%-2rem)] max-w-md sm:w-auto sm:max-w-none">
+        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-9999 flex flex-col gap-2 pointer-events-none items-center sm:items-end w-[calc(100%-2rem)] max-w-md sm:w-auto sm:max-w-none">
           <style>{`
             @keyframes toast-progress {
               from { width: 100%; }
