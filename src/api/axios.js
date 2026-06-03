@@ -2,18 +2,18 @@ import axios from "axios";
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const baseURL =
-  typeof rawApiBaseUrl === 'string' && rawApiBaseUrl.trim() !== ''
+  typeof rawApiBaseUrl === "string" && rawApiBaseUrl.trim() !== ""
     ? rawApiBaseUrl.trim()
     : import.meta.env.DEV
-    ? undefined
-    : 'https://hitzone-backend-three.vercel.app';
+      ? undefined
+      : "https://hitzone-backend-three.vercel.app";
 
 console.log(
-  '[API] baseURL:',
-  baseURL || '<relative api path>',
-  '(DEV=',
+  "[API] baseURL:",
+  baseURL || "<relative api path>",
+  "(DEV=",
   import.meta.env.DEV,
-  ')',
+  ")",
 );
 
 const api = axios.create({
