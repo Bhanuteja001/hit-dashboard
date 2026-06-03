@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../api/axios';
 import Loader from '../components/Loader';
+import Pagination from '../components/Pagination';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -168,6 +169,11 @@ const AdminDashboardMain = () => {
   const [stores, setStores] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
 
+  const [projectSummaries, setProjectSummaries] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [summaryPage, setSummaryPage] = useState(1);
+  const summaryItemsPerPage = 5;
+
   const activeProjects = projects.filter(p => !p.endDate || p.endDate === '');
   const activeProjectsCount = activeProjects.length;
   const isDashboardLoading = metrics.loading || financials.loading;
@@ -198,6 +204,34 @@ const AdminDashboardMain = () => {
         const storeTxns = storeTxnsRes.data || [];
         const finData = buildFinancialChartData(projectTxns, storeTxns);
         setFinancials({ ...finData, loading: false });
+
+        // Calculate Project summaries matching user Excel template:
+        // Project ID | Total Income | Total Expense | Project Cost | Pending Balance | Profit
+        const summaries = projectsList.map(p => {
+          const txns = projectTxns.filter(t => t.projectId === p._id);
+          const totalIncome = txns
+            .filter(t => t.type === 'CREDIT')
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+          const totalExpense = txns
+            .filter(t => t.type === 'DEBIT')
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+          const projectCost = Number(p.budget) || 0;
+          const pendingBalance = projectCost - totalIncome;
+          const profit = totalIncome - totalExpense;
+
+          return {
+            id: p._id,
+            projectRefId: p.projectRefId,
+            projectName: p.projectName,
+            clientName: p.clientName,
+            projectCost,
+            totalIncome,
+            totalExpense,
+            pendingBalance,
+            profit
+          };
+        });
+        setProjectSummaries(summaries);
       } catch (err) {
         console.error('Error fetching dashboard main metrics:', err);
         setMetrics(prev => ({ ...prev, loading: false }));
@@ -207,8 +241,27 @@ const AdminDashboardMain = () => {
     fetchMetrics();
   }, []);
 
+  useEffect(() => {
+    setSummaryPage(1);
+  }, [searchQuery]);
+
   const closeModal = () => setActiveModal(null);
   const { statusData, budgetData, monthlyData } = buildChartData(projects);
+
+  const filteredSummaries = projectSummaries.filter(s => {
+    const q = searchQuery.toLowerCase();
+    return (
+      (s.projectRefId || '').toLowerCase().includes(q) ||
+      (s.projectName || '').toLowerCase().includes(q) ||
+      (s.clientName || '').toLowerCase().includes(q)
+    );
+  });
+
+  const totalSummaryPages = Math.ceil(filteredSummaries.length / summaryItemsPerPage);
+  const paginatedSummaries = filteredSummaries.slice(
+    (summaryPage - 1) * summaryItemsPerPage,
+    summaryPage * summaryItemsPerPage
+  );
 
   if (isDashboardLoading) {
     return <Loader fullScreen={true} message="Loading dashboard..." />;
@@ -792,6 +845,155 @@ const AdminDashboardMain = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Project-wise Financial Summary ─────────────────────────────────── */}
+      <div className="bg-[#0f1a2e] rounded-2xl shadow-sm border border-gray-800 overflow-hidden mt-6">
+        <div className="px-6 py-5 border-b border-gray-800 bg-[#010813] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Project-wise Financial Statements</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Detailed breakdown of incomes, expenses, budgets, balances, and profits for each project</p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#020B1A] border border-gray-700 rounded-lg py-1.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#AED500] focus:border-transparent transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Desktop View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
+              <thead>
+                <tr className="bg-[#020B1A] border-b border-gray-800">
+                  <th className="py-3 px-4 font-semibold text-gray-400 uppercase tracking-wider text-center w-12">S.No</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 uppercase tracking-wider">Project ID & Name</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 uppercase tracking-wider text-right">Project Cost</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 uppercase tracking-wider text-right">Total Income</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 uppercase tracking-wider text-right">Total Expense</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 uppercase tracking-wider text-right">Pending Balance</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 uppercase tracking-wider text-right">Profit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {paginatedSummaries.length > 0 ? (
+                  paginatedSummaries.map((s, idx) => (
+                    <tr key={s.id} className="hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-4 text-center text-gray-500 font-medium">
+                        {(summaryPage - 1) * summaryItemsPerPage + idx + 1}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-[#AED500] font-bold block">{s.projectRefId}</span>
+                        <span className="text-gray-400 text-xs block mt-0.5">{s.projectName}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-medium text-white">
+                        ₹{s.projectCost.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-4 text-right text-[#00E4A8] font-medium">
+                        ₹{s.totalIncome.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-4 text-right text-[#FF3B30] font-medium">
+                        ₹{s.totalExpense.toLocaleString('en-IN')}
+                      </td>
+                      <td className={`py-3 px-4 text-right font-medium ${s.pendingBalance > 0 ? 'text-amber-500' : 'text-gray-400'}`}>
+                        ₹{s.pendingBalance.toLocaleString('en-IN')}
+                      </td>
+                      <td className={`py-3 px-4 text-right font-bold ${s.profit >= 0 ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                        {s.profit >= 0 ? '+' : ''}₹{s.profit.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="py-12 text-center text-gray-500">
+                      No projects found matching search query.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="block md:hidden space-y-4">
+            {paginatedSummaries.length > 0 ? (
+              paginatedSummaries.map((s, idx) => (
+                <div key={s.id} className="bg-[#010813]/60 border border-gray-800 rounded-xl p-4 space-y-3">
+                  <div className="flex justify-between items-start border-b border-gray-800/80 pb-2">
+                    <div>
+                      <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
+                        #{(summaryPage - 1) * summaryItemsPerPage + idx + 1}
+                      </span>
+                      <h4 className="text-sm font-bold text-[#AED500] mt-0.5">{s.projectRefId}</h4>
+                      <span className="text-xs text-gray-400 block">{s.projectName}</span>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${s.profit >= 0
+                      ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                      : 'bg-red-500/10 text-red-400 border-red-500/20'
+                    }`}>
+                      {s.profit >= 0 ? 'PROFIT' : 'LOSS'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div>
+                      <span className="text-gray-500 block">Project Cost</span>
+                      <span className="text-white font-medium">₹{s.projectCost.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Profit/Loss</span>
+                      <span className={`font-bold ${s.profit >= 0 ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                        {s.profit >= 0 ? '+' : ''}₹{s.profit.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[#00E4A8]/80 block">Total Income</span>
+                      <span className="text-[#00E4A8] font-medium">₹{s.totalIncome.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div>
+                      <span className="text-[#FF3B30]/80 block">Total Expense</span>
+                      <span className="text-[#FF3B30] font-medium">₹{s.totalExpense.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="col-span-2 pt-2 border-t border-gray-800/60 flex justify-between items-center">
+                      <span className="text-gray-500">Pending Balance</span>
+                      <span className={`font-semibold ${s.pendingBalance > 0 ? 'text-amber-500' : 'text-gray-400'}`}>
+                        ₹{s.pendingBalance.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-[#010813]/60 border border-gray-800 rounded-xl py-8 text-center text-gray-500 text-xs">
+                No projects found matching search query.
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalSummaryPages > 1 && (
+            <div className="border-t border-gray-800/40 pt-4">
+              <Pagination
+                currentPage={summaryPage}
+                totalPages={totalSummaryPages}
+                onPageChange={(page) => setSummaryPage(page)}
+                totalItems={filteredSummaries.length}
+                pageSize={summaryItemsPerPage}
+                itemName="projects"
+              />
+            </div>
+          )}
         </div>
       </div>
 
