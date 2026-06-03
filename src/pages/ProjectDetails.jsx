@@ -3,6 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useToast } from '../components/Toast';
 import Loader from '../components/Loader';
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
+} from 'recharts';
 
 const formatAddedBy = (name) => {
   if (!name) return 'Admin (Default Admin)';
@@ -12,6 +16,32 @@ const formatAddedBy = (name) => {
     return name;
   }
   return `Admin (${name})`;
+};
+
+// ── Custom Tooltips for Project Details Charts ────────────────────────────────
+const DarkTooltip = ({ active, payload, label, prefix = '' }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[#0f1a2e] border border-gray-700 rounded-xl px-3 py-2 shadow-2xl text-xs">
+      {label && <p className="text-gray-400 mb-1 font-medium">{label}</p>}
+      {payload.map((entry, i) => (
+        <p key={i} style={{ color: entry.color }} className="font-bold">
+          {prefix}{typeof entry.value === 'number' ? entry.value.toLocaleString('en-IN') : entry.value}
+        </p>
+      ))}
+    </div>
+  );
+};
+
+const PieTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[#0f1a2e] border border-gray-700 rounded-xl px-3 py-2 shadow-2xl text-xs">
+      <p style={{ color: payload[0]?.payload?.color || '#ffffff' }} className="font-bold">
+        {payload[0]?.name}: ₹{payload[0]?.value.toLocaleString('en-IN')}
+      </p>
+    </div>
+  );
 };
 
 const ProjectDetails = () => {
@@ -81,6 +111,21 @@ const ProjectDetails = () => {
   const projectCost = Number(project.budget) || 0;
   const netProfit = totalCredit - totalDebit;
   const remainingBudget = projectCost - totalCredit;
+
+  // Chart Data for Bar Chart: compares all 5 parameters
+  const barChartData = [
+    { name: 'Budget', amount: projectCost, color: '#3B82F6' },
+    { name: 'Total Received', amount: totalCredit, color: '#00E4A8' },
+    { name: 'Total Spent', amount: totalDebit, color: '#FF3B30' },
+    { name: 'Net Profit', amount: netProfit, color: netProfit >= 0 ? '#AED500' : '#FF3B30' },
+    { name: 'Remaining Budget', amount: remainingBudget, color: remainingBudget >= 0 ? '#FF9900' : '#EF4444' }
+  ];
+
+  // Chart Data for Pie Chart: breakdown of Received Funds (Spent vs Net Profit)
+  const pieChartData = [
+    { name: 'Total Spent', value: totalDebit, color: '#FF3B30' },
+    { name: 'Net Profit', value: Math.max(0, netProfit), color: '#AED500' }
+  ].filter(item => item.value > 0);
 
   const calculateDuration = (start, end) => {
     if (!start) return '-';
@@ -198,6 +243,108 @@ const ProjectDetails = () => {
               ₹{remainingBudget.toLocaleString('en-IN')}
             </div>
             <p className="text-[10px] text-gray-500">Budget minus received amount</p>
+          </div>
+        </div>
+
+        {/* Visual Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Donut Chart: Received Funds Utilization */}
+          <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#AED500]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+                Received Funds Utilization
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">Breakdown of total received amount into spent expenses and net profit</p>
+            </div>
+            <div className="h-56 flex flex-col justify-center items-center">
+              {pieChartData.length === 0 ? (
+                <div className="text-gray-500 text-xs py-10">No financial transactions to display chart.</div>
+              ) : (
+                <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-4">
+                  <div className="w-40 h-40 shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={65}
+                          paddingAngle={4}
+                          dataKey="value"
+                          strokeWidth={0}
+                        >
+                          {pieChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.9} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {pieChartData.map((d) => {
+                      const total = pieChartData.reduce((sum, item) => sum + item.value, 0);
+                      const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : 0;
+                      return (
+                        <div key={d.name} className="flex items-center gap-2 text-xs">
+                          <span className="w-3 h-3 rounded-full shrink-0" style={{ background: d.color }} />
+                          <span className="text-gray-400 font-medium">{d.name}:</span>
+                          <span className="text-white font-bold">₹{d.value.toLocaleString('en-IN')} ({pct}%)</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bar Chart: Financial Overview */}
+          <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Financial Parameters Comparison
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">Side-by-side comparison of budget, income, expenses, profit, and remaining budget</p>
+            </div>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: '#9ca3af', fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: '#9ca3af', fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => {
+                      if (Math.abs(v) >= 10000000) return `₹${(v / 10000000).toFixed(1)}Cr`;
+                      if (Math.abs(v) >= 100000) return `₹${(v / 100000).toFixed(1)}L`;
+                      if (Math.abs(v) >= 1000) return `₹${(v / 1000).toFixed(0)}k`;
+                      return `₹${v}`;
+                    }}
+                  />
+                  <Tooltip content={<DarkTooltip prefix="₹" />} />
+                  <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                    {barChartData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 

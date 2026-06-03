@@ -263,6 +263,26 @@ const AdminDashboardMain = () => {
     summaryPage * summaryItemsPerPage
   );
 
+  // Calculate aggregated project-wise metrics for charts
+  const totalProjectsBudget = projectSummaries.reduce((sum, s) => sum + (s.projectCost || 0), 0);
+  const totalProjectsReceived = projectSummaries.reduce((sum, s) => sum + (s.totalIncome || 0), 0);
+  const totalProjectsSpent = projectSummaries.reduce((sum, s) => sum + (s.totalExpense || 0), 0);
+  const totalProjectsProfit = projectSummaries.reduce((sum, s) => sum + (s.profit || 0), 0);
+  const totalProjectsRemaining = projectSummaries.reduce((sum, s) => sum + (s.pendingBalance || 0), 0);
+
+  const projectsBarChartData = [
+    { name: 'Total Budget', amount: totalProjectsBudget, color: '#3B82F6' },
+    { name: 'Total Received', amount: totalProjectsReceived, color: '#00E4A8' },
+    { name: 'Total Spent', amount: totalProjectsSpent, color: '#FF3B30' },
+    { name: 'Net Profit', amount: totalProjectsProfit, color: totalProjectsProfit >= 0 ? '#AED500' : '#FF3B30' },
+    { name: 'Remaining Budget', amount: totalProjectsRemaining, color: totalProjectsRemaining >= 0 ? '#FF9900' : '#EF4444' }
+  ];
+
+  const projectsPieChartData = [
+    { name: 'Total Spent', value: totalProjectsSpent, color: '#FF3B30' },
+    { name: 'Net Profit', value: Math.max(0, totalProjectsProfit), color: '#AED500' }
+  ].filter(item => item.value > 0);
+
   if (isDashboardLoading) {
     return <Loader fullScreen={true} message="Loading dashboard..." />;
   }
@@ -844,6 +864,108 @@ const AdminDashboardMain = () => {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── All Projects Financial Summary Charts ────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Donut Chart: Aggregated Projects Fund Utilization */}
+        <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#AED500]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+              </svg>
+              Projects Fund Utilization
+            </h3>
+            <p className="text-[11px] text-gray-500 mb-4">Combined breakdown of total received project funds into spent expenses and net profit</p>
+          </div>
+          <div className="h-56 flex flex-col justify-center items-center">
+            {projectsPieChartData.length === 0 ? (
+              <div className="text-gray-500 text-xs py-10">No financial transactions to display chart.</div>
+            ) : (
+              <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-4">
+                <div className="w-36 h-36 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={projectsPieChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={4}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {projectsPieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.9} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<PieTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {projectsPieChartData.map((d) => {
+                    const total = projectsPieChartData.reduce((sum, item) => sum + item.value, 0);
+                    const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : 0;
+                    return (
+                      <div key={d.name} className="flex items-center gap-2 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-gray-400 font-medium">{d.name}:</span>
+                        <span className="text-white font-bold">₹{d.value.toLocaleString('en-IN')} ({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bar Chart: Aggregated Financial Comparison */}
+        <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Projects Financial Comparison
+            </h3>
+            <p className="text-[11px] text-gray-500 mb-4">Combined side-by-side comparison of budget, income, expenses, profit, and remaining budget</p>
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={projectsBarChartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#9ca3af', fontSize: 9 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: '#9ca3af', fontSize: 9 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => {
+                    if (Math.abs(v) >= 10000000) return `₹${(v / 10000000).toFixed(1)}Cr`;
+                    if (Math.abs(v) >= 100000) return `₹${(v / 100000).toFixed(1)}L`;
+                    if (Math.abs(v) >= 1000) return `₹${(v / 1000).toFixed(0)}k`;
+                    return `₹${v}`;
+                  }}
+                />
+                <Tooltip content={<DarkTooltip prefix="₹" />} />
+                <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                  {projectsBarChartData.map((entry, idx) => (
+                    <Cell key={`cell-${idx}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
