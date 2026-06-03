@@ -14,16 +14,16 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
         <h3 className="text-xl font-bold text-white mb-2">Logout</h3>
         <p className="text-gray-400 mb-6">Are you sure you want to logout of your account?</p>
         
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={onClose}
-            className="flex-1 bg-transparent border border-gray-700 text-gray-300 font-semibold py-2.5 px-4 rounded-lg hover:bg-gray-800 transition-colors"
+            className="w-full sm:flex-1 bg-transparent border border-gray-700 text-gray-300 font-semibold py-2 sm:py-2.5 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer text-xs sm:text-sm"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 cursor-pointer bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition-colors"
+            className="w-full sm:flex-1 cursor-pointer bg-red-500 hover:bg-red-600 text-white font-bold py-2 sm:py-2.5 rounded-lg shadow-md transition-colors text-xs sm:text-sm"
           >
             Yes, Logout
           </button>

@@ -1,10 +1,11 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
-const Loader = ({ fullScreen = false, message = 'Loading details...' }) => {
-  return (
+const Loader = ({ fullScreen = false, message = 'Loading details...', className = '' }) => {
+  const loaderContent = (
     <div className={`transition-all duration-300 ${fullScreen
-        ? 'fixed inset-0 flex items-center justify-center bg-[#020B1A] z-[100]'
-        : 'flex flex-col items-center justify-center min-h-[350px] w-full py-12 bg-transparent animate-fade-in'
+      ? 'fixed inset-0 flex flex-col items-center justify-center bg-[#020B1A] z-[100]'
+      : `flex flex-col items-center justify-center min-h-[350px] w-full py-12 bg-transparent animate-fade-in ${className}`
       }`}>
       <div className="relative flex items-center justify-center">
         {/* Outer glowing shadow layer */}
@@ -27,6 +28,13 @@ const Loader = ({ fullScreen = false, message = 'Loading details...' }) => {
       </div>
     </div>
   );
+
+  if (fullScreen) {
+    return createPortal(loaderContent, document.body);
+  }
+
+  return loaderContent;
 };
 
 export default Loader;
+

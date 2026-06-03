@@ -249,15 +249,15 @@ function EmployeeDashboard() {
         {/* Mobile Header */}
         <MobileHeader onLogoutClick={() => setIsLogoutModalOpen(true)} />
 
-        <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <div className="max-w-6xl mx-auto px-3 py-5 sm:p-6 lg:p-8">
+          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Employee Dashboard</h1>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1">Manage and track your transactions</p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">Employee Dashboard</h1>
+              <p className="text-[11px] sm:text-xs md:text-sm text-gray-400 mt-1">Manage and track your transactions</p>
             </div>
             <button
               onClick={handleAdd}
-              className="w-full sm:w-auto bg-[#AED500] hover:bg-[#9cc000] text-[#020B1A] font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2 transform hover:-translate-y-0.5 cursor-pointer text-xs sm:text-sm"
+              className="w-full sm:w-auto bg-[#AED500] hover:bg-[#9cc000] text-[#020B1A] font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2 transform hover:-translate-y-0.5 cursor-pointer text-xs sm:text-sm md:text-base"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
@@ -442,32 +442,32 @@ function EmployeeDashboard() {
 
             {/* Mobile View (under md) */}
             <div className="block md:hidden space-y-4">
-              <div className="px-4 py-3 bg-[#010813] border border-gray-800 rounded-2xl flex justify-between items-center">
-                <h2 className="text-base font-semibold text-white">Recent Transactions</h2>
+              <div className="px-3.5 py-3 bg-[#010813] border border-gray-800 rounded-2xl flex justify-between items-center">
+                <h2 className="text-sm sm:text-base font-semibold text-white">Recent Transactions</h2>
               </div>
               {currentItems.length > 0 ? (
                 currentItems.map((trxn) => (
-                  <div key={trxn.id} className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-4 space-y-3 shadow-md animate-fade-in">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-sm font-bold text-white">{trxn.store}</h4>
-                        <span className="text-[10px] text-gray-500">{trxn.date}</span>
+                  <div key={trxn.id} className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3 shadow-md animate-fade-in">
+                    <div className="flex justify-between items-start gap-2.5">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-white break-words leading-tight">{trxn.store}</h4>
+                        <span className="text-[10px] text-gray-500 block mt-0.5">{trxn.date}</span>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${trxn.trxnType === 'CREDIT'
+                      <span className={`inline-flex items-center px-2 py-0.5 sm:px-2.5 rounded-full text-[9px] sm:text-[10px] font-medium border shrink-0 ${trxn.trxnType === 'CREDIT'
                         ? 'bg-green-500/10 text-green-400 border-green-500/20'
                         : 'bg-red-500/10 text-red-400 border-red-500/20'
                         }`}>
                         {trxn.trxnType}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-800/60 text-xs">
+                    <div className="flex justify-between items-center pt-2.5 border-t border-gray-800/60 text-xs">
                       <span className="text-gray-400">Amount</span>
                       <span className="text-white font-semibold">₹{Number(trxn.amount).toLocaleString('en-IN')}</span>
                     </div>
                     {trxn.description && (
-                      <div className="pt-2 border-t border-gray-800/60 text-xs">
+                      <div className="pt-2.5 border-t border-gray-800/60 text-xs">
                         <span className="text-gray-400 block mb-1">Description</span>
-                        <p className="text-gray-300 bg-[#020B1A] p-2.5 rounded-lg border border-gray-800/40 text-[11px] leading-relaxed">
+                        <p className="text-gray-300 bg-[#020B1A] p-2.5 rounded-lg border border-gray-800/40 text-[10px] sm:text-[11px] leading-relaxed break-words">
                           {trxn.description}
                         </p>
                       </div>
@@ -479,7 +479,7 @@ function EmployeeDashboard() {
                   <svg className="w-12 h-12 text-gray-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <p>No transactions found.</p>
+                  <p className="text-sm">No transactions found.</p>
                   <p className="text-xs text-gray-400 mt-1">Click the Add button above to create one.</p>
                 </div>
               )}

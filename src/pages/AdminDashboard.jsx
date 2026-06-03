@@ -107,7 +107,7 @@ function AdminDashboard() {
 
   const renderContent = () => {
     if (isTabLoading) {
-      return <Loader message={`Loading ${activeTab}...`} />;
+      return <Loader message={`Loading ${activeTab}...`} className="min-h-[60vh]" />;
     }
     const content = (() => {
       switch (activeTab) {

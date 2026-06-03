@@ -27,24 +27,24 @@ const icons = {
 
 const styles = {
   success: {
-    bar:  'bg-[#AED500]',
+    bar: 'bg-[#AED500]',
     icon: 'text-[#AED500]',
-    bg:   'bg-[#0f1a2e] border border-[#AED500]/30',
+    bg: 'bg-[#0f1a2e] border border-[#AED500]/30',
   },
   error: {
-    bar:  'bg-red-500',
+    bar: 'bg-red-500',
     icon: 'text-red-400',
-    bg:   'bg-[#0f1a2e] border border-red-500/30',
+    bg: 'bg-[#0f1a2e] border border-red-500/30',
   },
   warning: {
-    bar:  'bg-yellow-400',
+    bar: 'bg-yellow-400',
     icon: 'text-yellow-400',
-    bg:   'bg-[#0f1a2e] border border-yellow-400/30',
+    bg: 'bg-[#0f1a2e] border border-yellow-400/30',
   },
   info: {
-    bar:  'bg-blue-400',
+    bar: 'bg-blue-400',
     icon: 'text-blue-400',
-    bg:   'bg-[#0f1a2e] border border-blue-400/30',
+    bg: 'bg-[#0f1a2e] border border-blue-400/30',
   },
 };
 
@@ -132,9 +132,9 @@ export const ToastProvider = ({ children }) => {
 
   const toast = {
     success: (msg, dur) => addToast(msg, 'success', dur),
-    error:   (msg, dur) => addToast(msg, 'error',   dur),
+    error: (msg, dur) => addToast(msg, 'error', dur),
     warning: (msg, dur) => addToast(msg, 'warning', dur),
-    info:    (msg, dur) => addToast(msg, 'info',    dur),
+    info: (msg, dur) => addToast(msg, 'info', dur),
   };
 
   return (
