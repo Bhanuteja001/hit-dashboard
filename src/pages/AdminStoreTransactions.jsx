@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import Loader from '../components/Loader';
@@ -44,6 +45,7 @@ const inputCls = (hasError) =>
 // ── Main Component ────────────────────────────────────────────────────────────
 const AdminStoreTransactions = () => {
   const toast = useToast();
+  const { user } = useAuth();
 
   const [transactions, setTransactions]       = useState([]);
   const [stores, setStores]                   = useState([]);
@@ -249,6 +251,7 @@ const AdminStoreTransactions = () => {
       title:       'Store Transaction',
       description: `Store transaction for ${selectedStore ? selectedStore.name : 'Branch'}`,
       amount:      Number(data.amount),
+      addedBy:     user ? user.name : 'Admin',
     };
 
     try {

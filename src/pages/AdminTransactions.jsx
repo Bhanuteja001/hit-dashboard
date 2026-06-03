@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import Loader from '../components/Loader';
@@ -45,6 +46,7 @@ const inputCls = (hasError) =>
 // ── Main Component ────────────────────────────────────────────────────────────
 const AdminTransactions = () => {
   const toast = useToast();
+  const { user } = useAuth();
 
   const [transactions, setTransactions]         = useState([]);
   const [projects, setProjects]                 = useState([]);
@@ -212,6 +214,7 @@ const AdminTransactions = () => {
       title: data.category,
       description: data.description || '',
       amount: Number(data.amount),
+      addedBy: user ? user.name : 'Admin',
     };
 
     try {
