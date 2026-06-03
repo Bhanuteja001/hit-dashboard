@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const baseURL =
-  import.meta.env.VITE_API_BASE_URL ??
+  import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.DEV
     ? undefined
     : "https://hitzone-backend-three.vercel.app");
 
 console.log(
   "[API] baseURL:",
-  baseURL ?? "<relative api path>",
+  baseURL || "<relative api path>",
   "(DEV=",
   import.meta.env.DEV,
   ")",
