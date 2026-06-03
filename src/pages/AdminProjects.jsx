@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -61,6 +62,7 @@ const formatCost = (val) => {
 // ── Main Component ────────────────────────────────────────────────────────────
 const AdminProjects = () => {
   const toast = useToast();
+  const navigate = useNavigate();
 
   const [projects, setProjects]               = useState([]);
   const [isLoading, setIsLoading]             = useState(true);
@@ -195,6 +197,10 @@ const AdminProjects = () => {
       projectDescription: project.projectDescription || '',
     });
     setIsFormOpen(true);
+  };
+
+  const handleView = (project) => {
+    navigate(`/admin/project-details/${project.id}`);
   };
 
   // ── Delete (with confirm modal) ───────────────────────────────────────────
@@ -464,6 +470,16 @@ const AdminProjects = () => {
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
+                            onClick={() => handleView(p)}
+                            className="p-1.5 bg-[#AED500]/10 text-[#AED500] hover:bg-[#AED500]/20 rounded-md transition-colors cursor-pointer"
+                            title="View Details"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                          <button
                             onClick={() => handleEdit(p)}
                             className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors cursor-pointer"
                             title="Edit"
@@ -571,7 +587,17 @@ const AdminProjects = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2.5">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleView(p)}
+                      className="flex-1 py-2 bg-[#AED500]/10 hover:bg-[#AED500]/20 text-[#AED500] font-semibold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View
+                    </button>
                     <button
                       onClick={() => handleEdit(p)}
                       className="flex-1 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-semibold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"

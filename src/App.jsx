@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ProjectDetails from './pages/ProjectDetails';
 import Loader from './components/Loader';
 import { useAuth } from './context/AuthContext';
 import './App.css';
@@ -77,6 +78,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/project-details/:id"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ProjectDetails />
               </ProtectedRoute>
             }
           />
