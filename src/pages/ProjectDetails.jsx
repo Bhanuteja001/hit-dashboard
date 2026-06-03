@@ -259,6 +259,7 @@ const ProjectDetails = () => {
                     <th className="py-2.5 px-2 font-semibold">Date</th>
                     <th className="py-2.5 px-2 font-semibold">Category</th>
                     <th className="py-2.5 px-2 font-semibold">Description</th>
+                    <th className="py-2.5 px-2 font-semibold">Added By</th>
                     <th className="py-2.5 px-2 font-semibold text-right">Amount</th>
                   </tr>
                 </thead>
@@ -271,6 +272,7 @@ const ProjectDetails = () => {
                         <td className="py-2.5 px-2 text-gray-400 max-w-[120px] truncate" title={t.description}>
                           {t.description || '-'}
                         </td>
+                        <td className="py-2.5 px-2 text-gray-400">{t.addedBy || 'Admin'}</td>
                         <td className="py-2.5 px-2 text-[#00FF00] font-bold text-right">
                           ₹{t.amount.toLocaleString('en-IN')}
                         </td>
@@ -278,7 +280,7 @@ const ProjectDetails = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="py-8 text-center text-gray-500">
+                      <td colSpan="5" className="py-8 text-center text-gray-500">
                         No credit transactions found.
                       </td>
                     </tr>
@@ -307,6 +309,7 @@ const ProjectDetails = () => {
                     <th className="py-2.5 px-2 font-semibold">Date</th>
                     <th className="py-2.5 px-2 font-semibold">Category</th>
                     <th className="py-2.5 px-2 font-semibold">Description</th>
+                    <th className="py-2.5 px-2 font-semibold">Added By</th>
                     <th className="py-2.5 px-2 font-semibold text-right">Amount</th>
                   </tr>
                 </thead>
@@ -319,6 +322,7 @@ const ProjectDetails = () => {
                         <td className="py-2.5 px-2 text-gray-400 max-w-[120px] truncate" title={t.description}>
                           {t.description || '-'}
                         </td>
+                        <td className="py-2.5 px-2 text-gray-400">{t.addedBy || 'Admin'}</td>
                         <td className="py-2.5 px-2 text-red-400 font-bold text-right">
                           ₹{t.amount.toLocaleString('en-IN')}
                         </td>
@@ -326,7 +330,7 @@ const ProjectDetails = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="py-8 text-center text-gray-500">
+                      <td colSpan="5" className="py-8 text-center text-gray-500">
                         No debit transactions found.
                       </td>
                     </tr>

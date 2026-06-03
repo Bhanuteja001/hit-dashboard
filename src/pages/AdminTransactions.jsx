@@ -109,6 +109,7 @@ const AdminTransactions = () => {
             category: t.title,
             description: t.description || '',
             amount: t.amount,
+            addedBy: t.addedBy || 'Admin',
           }));
         } catch (err) {
           console.error(`Failed to load transactions for project ${p._id}:`, err);
@@ -421,6 +422,7 @@ const AdminTransactions = () => {
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Type</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Category</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Description</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Added By</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider text-right">Amount</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider text-center">Actions</th>
                 </tr>
@@ -428,7 +430,7 @@ const AdminTransactions = () => {
               <tbody className="divide-y divide-gray-800 text-sm">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="8" className="py-4">
+                    <td colSpan="9" className="py-4">
                       <Loader message="Loading transactions..." />
                     </td>
                   </tr>
@@ -451,6 +453,7 @@ const AdminTransactions = () => {
                       </td>
                       <td className="py-3 px-4 text-gray-300">{t.category}</td>
                       <td className="py-3 px-4 text-gray-400 max-w-[200px] truncate" title={t.description}>{t.description || '-'}</td>
+                      <td className="py-3 px-4 text-gray-300">{t.addedBy}</td>
                       <td className="py-3 px-4 text-gray-100 font-medium text-right">
                         ₹{Number(t.amount).toLocaleString('en-IN')}
                       </td>
@@ -546,6 +549,10 @@ const AdminTransactions = () => {
                     <div className="col-span-2">
                       <span className="text-gray-400 block mb-0.5">Location</span>
                       <span className="text-white font-medium">{t.location || '-'}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-400 block mb-0.5">Added By</span>
+                      <span className="text-white font-medium">{t.addedBy}</span>
                     </div>
                     {t.description && (
                       <div className="col-span-2 mt-1">

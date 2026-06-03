@@ -148,6 +148,7 @@ const AdminStoreTransactions = () => {
             store:    store.name,
             trxnType: t.type,
             amount:   t.amount,
+            addedBy:  t.addedBy || 'Admin',
           }));
         } catch (err) {
           console.error(`Failed to load transactions for store ${store._id}:`, err);
@@ -577,6 +578,7 @@ const AdminStoreTransactions = () => {
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Date</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Store</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Type</th>
+                  <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider">Added By</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider text-right">Amount</th>
                   <th className="py-3 px-4 font-semibold text-gray-400 text-xs uppercase tracking-wider text-center">Actions</th>
                 </tr>
@@ -584,7 +586,7 @@ const AdminStoreTransactions = () => {
               <tbody className="divide-y divide-gray-800 text-sm">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="6" className="py-4">
+                    <td colSpan="7" className="py-4">
                       <Loader message="Loading transactions..." />
                     </td>
                   </tr>
@@ -609,6 +611,7 @@ const AdminStoreTransactions = () => {
                           {trxn.trxnType}
                         </span>
                       </td>
+                      <td className="py-3 px-4 text-gray-300">{trxn.addedBy}</td>
                       <td className="py-3 px-4 font-semibold text-right text-white">
                         ₹{Number(trxn.amount).toLocaleString('en-IN')}
                       </td>
@@ -692,6 +695,10 @@ const AdminStoreTransactions = () => {
                     <div>
                       <span className="text-gray-400 block mb-0.5">Amount</span>
                       <span className="text-white font-semibold">₹{Number(trxn.amount).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-400 block mb-0.5">Added By</span>
+                      <span className="text-white font-medium">{trxn.addedBy}</span>
                     </div>
                   </div>
 
