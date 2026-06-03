@@ -7,18 +7,27 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
+  const fetchUser = async (force = false) => {
+    const hasSession = sessionStorage.getItem('isLoggedInSession') === 'true';
+    if (!hasSession && !force) {
+      console.log('No active tab session flag found. Skipping auto-login.');
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       console.log('Fetching user data (cookie-based auth)...');
       const res = await api.get('/auth/me');
       console.log('User data received:', res.data);
       setUser(res.data);
-      localStorage.setItem('userRole', res.data.role);
+      sessionStorage.setItem('userRole', res.data.role);
     } catch (err) {
       console.error('Error fetching user:', err.response?.data || err.message);
       setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('userRole');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('userRole');
+      sessionStorage.removeItem('isLoggedInSession');
     } finally {
       setLoading(false);
     }
@@ -30,15 +39,16 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (userData) => {
     console.log('Login called with:', userData);
+    sessionStorage.setItem('isLoggedInSession', 'true');
     // If server returned a token (development fallback), persist it so axios can send it in headers
     if (userData?.token) {
-      localStorage.setItem('token', userData.token);
-      console.log('Dev token saved to localStorage:', userData.token.substring(0, 20) + '...');
+      sessionStorage.setItem('token', userData.token);
+      console.log('Dev token saved to sessionStorage:', userData.token.substring(0, 20) + '...');
     }
 
     // Refresh user from server (will use cookie if present, or header if token saved)
-    await fetchUser();
-    if (userData?.role) localStorage.setItem('userRole', userData.role);
+    await fetchUser(true);
+    if (userData?.role) sessionStorage.setItem('userRole', userData.role);
   };
 
   const logout = async () => {
@@ -48,8 +58,6 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', err);
     } finally {
       setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('userRole');
       sessionStorage.clear();
     }
   };
