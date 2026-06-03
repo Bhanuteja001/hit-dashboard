@@ -1,10 +1,18 @@
 import axios from "axios";
 
 const baseURL =
-  import.meta.env?.VITE_API_BASE_URL ||
-  (import.meta.env?.DEV ? "http://localhost:3000" : "https://hitzone-backend-three.vercel.app");
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.DEV
+    ? undefined
+    : "https://hitzone-backend-three.vercel.app");
 
-console.log("[API] baseURL:", baseURL);
+console.log(
+  "[API] baseURL:",
+  baseURL ?? "<relative api path>",
+  "(DEV=",
+  import.meta.env.DEV,
+  ")",
+);
 
 const api = axios.create({
   baseURL,
@@ -30,7 +38,10 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log("Token added to request from sessionStorage:", token.substring(0, 20) + "...");
+      console.log(
+        "Token added to request from sessionStorage:",
+        token.substring(0, 20) + "...",
+      );
     } else {
       console.log("No token found in sessionStorage or memory");
     }
