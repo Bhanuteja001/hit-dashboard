@@ -70,7 +70,7 @@ const ProjectDetails = () => {
   
   const projectCost = Number(project.budget) || 0;
   const netProfit = totalCredit - totalDebit;
-  const remainingBudget = projectCost - totalDebit;
+  const remainingBudget = projectCost - totalCredit;
 
   const calculateDuration = (start, end) => {
     if (!start) return '-';
@@ -187,7 +187,7 @@ const ProjectDetails = () => {
             <div className={`text-xl sm:text-2xl font-bold ${remainingBudget >= 0 ? 'text-white' : 'text-red-500'}`}>
               ₹{remainingBudget.toLocaleString('en-IN')}
             </div>
-            <p className="text-[10px] text-gray-500">Budget minus expenses</p>
+            <p className="text-[10px] text-gray-500">Budget minus received amount</p>
           </div>
         </div>
 

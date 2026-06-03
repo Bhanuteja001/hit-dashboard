@@ -305,7 +305,7 @@ const AdminTransactions = () => {
                     <option value="">Select Project</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.projectName} ({p.projectId})
+                        {p.clientName} ({p.projectId})
                       </option>
                     ))}
                   </select>
