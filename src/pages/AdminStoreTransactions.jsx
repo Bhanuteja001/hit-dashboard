@@ -40,6 +40,16 @@ const inputCls = (hasError) =>
     hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-[#AED500]'
   }`;
 
+const formatAddedBy = (name) => {
+  if (!name) return 'Admin (Default Admin)';
+  const lower = name.toLowerCase();
+  if (lower.includes('admin')) {
+    if (lower === 'default admin') return 'Admin (Default Admin)';
+    return name;
+  }
+  return `Admin (${name})`;
+};
+
 
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -150,7 +160,7 @@ const AdminStoreTransactions = () => {
             store:    store.name,
             trxnType: t.type,
             amount:   t.amount,
-            addedBy:  t.addedBy || 'Admin',
+            addedBy:  t.addedBy || 'Default Admin',
           }));
         } catch (err) {
           console.error(`Failed to load transactions for store ${store._id}:`, err);
@@ -251,7 +261,7 @@ const AdminStoreTransactions = () => {
       title:       'Store Transaction',
       description: `Store transaction for ${selectedStore ? selectedStore.name : 'Branch'}`,
       amount:      Number(data.amount),
-      addedBy:     user ? user.name : 'Admin',
+      addedBy:     user ? user.name : 'Default Admin',
     };
 
     try {
@@ -614,7 +624,7 @@ const AdminStoreTransactions = () => {
                           {trxn.trxnType}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-gray-300">{trxn.addedBy}</td>
+                      <td className="py-3 px-4 text-gray-300">{formatAddedBy(trxn.addedBy)}</td>
                       <td className="py-3 px-4 font-semibold text-right text-white">
                         ₹{Number(trxn.amount).toLocaleString('en-IN')}
                       </td>
@@ -701,7 +711,7 @@ const AdminStoreTransactions = () => {
                     </div>
                     <div className="col-span-2">
                       <span className="text-gray-400 block mb-0.5">Added By</span>
-                      <span className="text-white font-medium">{trxn.addedBy}</span>
+                      <span className="text-white font-medium">{formatAddedBy(trxn.addedBy)}</span>
                     </div>
                   </div>
 

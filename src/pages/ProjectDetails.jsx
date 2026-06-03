@@ -4,6 +4,16 @@ import api from '../api/axios';
 import { useToast } from '../components/Toast';
 import Loader from '../components/Loader';
 
+const formatAddedBy = (name) => {
+  if (!name) return 'Admin (Default Admin)';
+  const lower = name.toLowerCase();
+  if (lower.includes('admin')) {
+    if (lower === 'default admin') return 'Admin (Default Admin)';
+    return name;
+  }
+  return `Admin (${name})`;
+};
+
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -272,7 +282,7 @@ const ProjectDetails = () => {
                         <td className="py-2.5 px-2 text-gray-400 max-w-[120px] truncate" title={t.description}>
                           {t.description || '-'}
                         </td>
-                        <td className="py-2.5 px-2 text-gray-400">{t.addedBy || 'Admin'}</td>
+                        <td className="py-2.5 px-2 text-gray-400">{formatAddedBy(t.addedBy)}</td>
                         <td className="py-2.5 px-2 text-[#00FF00] font-bold text-right">
                           ₹{t.amount.toLocaleString('en-IN')}
                         </td>
@@ -322,7 +332,7 @@ const ProjectDetails = () => {
                         <td className="py-2.5 px-2 text-gray-400 max-w-[120px] truncate" title={t.description}>
                           {t.description || '-'}
                         </td>
-                        <td className="py-2.5 px-2 text-gray-400">{t.addedBy || 'Admin'}</td>
+                        <td className="py-2.5 px-2 text-gray-400">{formatAddedBy(t.addedBy)}</td>
                         <td className="py-2.5 px-2 text-red-400 font-bold text-right">
                           ₹{t.amount.toLocaleString('en-IN')}
                         </td>

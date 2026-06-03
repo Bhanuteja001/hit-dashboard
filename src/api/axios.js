@@ -2,7 +2,7 @@ import axios from "axios";
 
 const baseURL =
   import.meta.env?.VITE_API_BASE_URL ||
-  "https://hitzone-backend-three.vercel.app";
+  (import.meta.env?.DEV ? "http://localhost:3000" : "https://hitzone-backend-three.vercel.app");
 
 console.log("[API] baseURL:", baseURL);
 

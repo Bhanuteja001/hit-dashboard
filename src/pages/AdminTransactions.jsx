@@ -41,6 +41,16 @@ const inputCls = (hasError) =>
     hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-[#AED500]'
   }`;
 
+const formatAddedBy = (name) => {
+  if (!name) return 'Admin (Default Admin)';
+  const lower = name.toLowerCase();
+  if (lower.includes('admin')) {
+    if (lower === 'default admin') return 'Admin (Default Admin)';
+    return name;
+  }
+  return `Admin (${name})`;
+};
+
 
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -111,7 +121,7 @@ const AdminTransactions = () => {
             category: t.title,
             description: t.description || '',
             amount: t.amount,
-            addedBy: t.addedBy || 'Admin',
+            addedBy: t.addedBy || 'Default Admin',
           }));
         } catch (err) {
           console.error(`Failed to load transactions for project ${p._id}:`, err);
@@ -214,7 +224,7 @@ const AdminTransactions = () => {
       title: data.category,
       description: data.description || '',
       amount: Number(data.amount),
-      addedBy: user ? user.name : 'Admin',
+      addedBy: user ? user.name : 'Default Admin',
     };
 
     try {
@@ -456,7 +466,7 @@ const AdminTransactions = () => {
                       </td>
                       <td className="py-3 px-4 text-gray-300">{t.category}</td>
                       <td className="py-3 px-4 text-gray-400 max-w-[200px] truncate" title={t.description}>{t.description || '-'}</td>
-                      <td className="py-3 px-4 text-gray-300">{t.addedBy}</td>
+                      <td className="py-3 px-4 text-gray-300">{formatAddedBy(t.addedBy)}</td>
                       <td className="py-3 px-4 text-gray-100 font-medium text-right">
                         ₹{Number(t.amount).toLocaleString('en-IN')}
                       </td>
@@ -555,7 +565,7 @@ const AdminTransactions = () => {
                     </div>
                     <div className="col-span-2">
                       <span className="text-gray-400 block mb-0.5">Added By</span>
-                      <span className="text-white font-medium">{t.addedBy}</span>
+                      <span className="text-white font-medium">{formatAddedBy(t.addedBy)}</span>
                     </div>
                     {t.description && (
                       <div className="col-span-2 mt-1">
