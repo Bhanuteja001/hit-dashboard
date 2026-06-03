@@ -48,7 +48,7 @@ const formatAddedBy = (name) => {
     if (lower === 'default admin') return 'Admin (Default Admin)';
     return name;
   }
-  return `Admin (${name})`;
+  return `Admin : ${name}`;
 };
 
 
