@@ -1,12 +1,20 @@
 import axios from "axios";
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-const baseURL =
-  typeof rawApiBaseUrl === "string" && rawApiBaseUrl.trim() !== ""
+let baseURL =
+  typeof rawApiBaseUrl === "string" && rawApiBaseUrl.trim() !== "" && rawApiBaseUrl.trim() !== "/"
     ? rawApiBaseUrl.trim()
-    : import.meta.env.DEV
-      ? undefined
-      : "https://hitzone-backend-three.vercel.app";
+    : "https://hitzone-backend-three.vercel.app";
+
+// During local development on localhost, default to undefined to use Vite's server.proxy config
+if (typeof window !== "undefined") {
+  const hostname = window.location.hostname;
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.")) {
+    if (!rawApiBaseUrl || rawApiBaseUrl.trim() === "" || rawApiBaseUrl.trim() === "/") {
+      baseURL = undefined;
+    }
+  }
+}
 
 console.log(
   "[API] baseURL:",
