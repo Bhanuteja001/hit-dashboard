@@ -51,6 +51,7 @@ const ProjectDetails = () => {
 
   const [project, setProject] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [admins, setAdmins] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProjectData = async () => {
@@ -64,6 +65,15 @@ const ProjectDetails = () => {
       // Fetch transactions for this project
       const transactionsRes = await api.get(`/projects/${id}/transactions`);
       setTransactions(transactionsRes.data);
+
+      // Fetch users to get admins
+      try {
+        const usersRes = await api.get('/auth/users');
+        const allAdmins = usersRes.data.filter(u => u.role === 'admin');
+        setAdmins(allAdmins);
+      } catch (err) {
+        console.error('Failed to fetch users/admins:', err);
+      }
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || err.message || 'Failed to fetch project details');
@@ -111,6 +121,80 @@ const ProjectDetails = () => {
   const projectCost = Number(project.budget) || 0;
   const netProfit = totalCredit - totalDebit;
   const remainingBudget = projectCost - totalCredit;
+
+  // --- Admin Profit/Loss Splitting and Spending Adjustment ---
+  // Get all unique admin names from transactions as a fallback
+  const getAdminsList = () => {
+    let list = [...admins];
+    
+    const txnAdminNames = new Set();
+    transactions.forEach(t => {
+      if (t.addedBy) {
+        txnAdminNames.add(t.addedBy);
+      }
+    });
+    
+    txnAdminNames.forEach(name => {
+      const exists = list.some(u => u.name.toLowerCase() === name.toLowerCase());
+      if (!exists) {
+        list.push({
+          name: name,
+          role: 'admin',
+          createdAt: new Date(0)
+        });
+      }
+    });
+    
+    if (list.length === 0) {
+      list.push({ name: 'Default Admin', role: 'admin', createdAt: new Date(0) });
+    }
+    
+    const uniqueList = [];
+    const seen = new Set();
+    list.forEach(u => {
+      const lower = u.name.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        uniqueList.push(u);
+      }
+    });
+    
+    return uniqueList.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  };
+
+  const finalAdmins = getAdminsList();
+  const numAdmins = finalAdmins.length;
+  
+  // Calculate total spent per admin
+  const adminSpents = finalAdmins.map(admin => {
+    const spent = debitTxns
+      .filter(t => {
+        const txnAddedBy = (t.addedBy || 'Default Admin').toLowerCase();
+        const adminName = admin.name.toLowerCase();
+        return txnAddedBy === adminName || (adminName === 'default admin' && txnAddedBy.includes('default admin'));
+      })
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    return {
+      admin,
+      spent
+    };
+  });
+  
+  const baseShare = netProfit / numAdmins;
+  const totalAdminSpents = adminSpents.reduce((sum, item) => sum + item.spent, 0);
+  const avgSpent = totalAdminSpents / numAdmins;
+  
+  const adminProfitShares = adminSpents.map(item => {
+    const spentDev = item.spent - avgSpent;
+    const finalShare = baseShare + spentDev;
+    return {
+      admin: item.admin,
+      spent: item.spent,
+      baseShare,
+      adjustment: spentDev,
+      finalShare
+    };
+  });
 
   // Chart Data for Bar Chart: compares all 5 parameters
   const barChartData = [
@@ -243,6 +327,75 @@ const ProjectDetails = () => {
               ₹{remainingBudget.toLocaleString('en-IN')}
             </div>
             <p className="text-[10px] text-gray-500">Budget minus received amount</p>
+          </div>
+        </div>
+
+        {/* Admin Profit & Loss Distribution */}
+        <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#AED500]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Admin Profit & Loss Distribution
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Net profit split equally, adjusted by each admin's relative spending. Average admin spent: ₹{Math.round(avgSpent).toLocaleString('en-IN')}.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {adminProfitShares.map(({ admin, spent, baseShare, adjustment, finalShare }, idx) => {
+              const isFinalProfit = finalShare >= 0;
+              const isAdjustmentPositive = adjustment >= 0;
+              return (
+                <div 
+                  key={admin.name} 
+                  className={`bg-[#020B1A]/40 border rounded-2xl p-5 hover:border-gray-700 transition-all space-y-4 relative overflow-hidden group`}
+                >
+                  {/* Background Glow */}
+                  <div className={`absolute top-0 right-0 w-24 h-24 rounded-full filter blur-3xl opacity-10 -mr-8 -mt-8 transition-all duration-300 group-hover:scale-125 ${isFinalProfit ? 'bg-[#AED500]' : 'bg-red-500'}`} />
+                  
+                  {/* Header */}
+                  <div className="flex justify-between items-start border-b border-gray-800/60 pb-3">
+                    <div>
+                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Admin #{idx + 1}</span>
+                      <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">{formatAddedBy(admin.name)}</h4>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${isFinalProfit ? 'bg-[#00FF00]/10 text-[#00FF00] border border-[#00FF00]/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
+                      {isFinalProfit ? 'PROFIT SHARE' : 'LOSS SHARE'}
+                    </span>
+                  </div>
+
+                  {/* Calculations breakdown */}
+                  <div className="space-y-2.5 text-xs text-gray-400">
+                    <div className="flex justify-between items-center">
+                      <span>Equal Base Share:</span>
+                      <span className="font-semibold text-gray-200">
+                        {baseShare >= 0 ? '' : '-'}₹{Math.abs(Math.round(baseShare)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Individual Spent:</span>
+                      <span className="font-semibold text-gray-200">₹{Math.round(spent).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-800/40 pb-2.5">
+                      <span>Spent Adjustment:</span>
+                      <span className={`font-semibold flex items-center gap-1 ${isAdjustmentPositive ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                        {isAdjustmentPositive ? '+' : '-'}₹{Math.abs(Math.round(adjustment)).toLocaleString('en-IN')}
+                        <span className="text-[9px] text-gray-500 font-normal">({isAdjustmentPositive ? 'spent more' : 'spent less'})</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1.5">
+                      <span className="text-sm font-bold text-white">Final Share:</span>
+                      <span className={`text-base font-extrabold ${isFinalProfit ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                        {isFinalProfit ? '+' : ''}₹{Math.round(finalShare).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -37,16 +37,15 @@ const FieldError = ({ message }) =>
   ) : null;
 
 const inputCls = (hasError) =>
-  `w-full border rounded-lg py-2 px-3 bg-[#020B1A] text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-    hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-[#AED500]'
+  `w-full border rounded-lg py-2 px-3 bg-[#020B1A] text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-[#AED500]'
   }`;
 
 const formatAddedBy = (name) => {
-  if (!name) return 'Admin (Default Admin)';
+  if (!name) return 'Admin : (Default Admin)';
   const lower = name.toLowerCase();
   if (lower.includes('admin')) {
-    if (lower === 'default admin') return 'Admin (Default Admin)';
-    return name;
+    if (lower === 'default admin') return 'Admin :  (Default Admin)';
+    return `Admin : ${name}`;
   }
   return `Admin : ${name}`;
 };
@@ -58,14 +57,14 @@ const AdminTransactions = () => {
   const toast = useToast();
   const { user } = useAuth();
 
-  const [transactions, setTransactions]         = useState([]);
-  const [projects, setProjects]                 = useState([]);
-  const [isLoading, setIsLoading]               = useState(true);
-  const [isFormOpen, setIsFormOpen]             = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
-  const [serverError, setServerError]           = useState('');
-  const [deleteTarget, setDeleteTarget]         = useState(null); // { id, label }
-  const [currentPage, setCurrentPage]           = useState(1);
+  const [serverError, setServerError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, label }
+  const [currentPage, setCurrentPage] = useState(1);
 
   const {
     register,
@@ -86,7 +85,7 @@ const AdminTransactions = () => {
   });
 
   const watchedProjectId = watch('projectId');
-  const selectedProject  = projects.find((p) => p.id === watchedProjectId);
+  const selectedProject = projects.find((p) => p.id === watchedProjectId);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchTransactions = async (silent = false, activeRef = { current: true }) => {
@@ -129,7 +128,7 @@ const AdminTransactions = () => {
         }
       });
 
-      const results  = await Promise.all(allTxnsPromises);
+      const results = await Promise.all(allTxnsPromises);
       if (!activeRef.current) return;
       const flattened = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
       setTransactions(flattened);
@@ -156,7 +155,7 @@ const AdminTransactions = () => {
 
   // ── Pagination ─────────────────────────────────────────────────────────────
   const totalPages = Math.ceil(transactions.length / PAGE_SIZE);
-  const paginated  = transactions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = transactions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -276,11 +275,11 @@ const AdminTransactions = () => {
 
       {/* ── Form Modal ─────────────────────────────────────────────────────── */}
       {isFormOpen && createPortal(
-        <div 
+        <div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4 text-left animate-fade-in"
           onClick={() => setIsFormOpen(false)}
         >
-          <div 
+          <div
             className="bg-[#0f1a2e] border border-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
@@ -456,11 +455,10 @@ const AdminTransactions = () => {
                       <td className="py-3 px-4 text-gray-300">{t.date}</td>
                       <td className="py-3 px-4 text-[#AED500] font-bold">{t.projectId}</td>
                       <td className="py-3 px-4">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
-                          t.type === 'Income'
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${t.type === 'Income'
                             ? 'bg-[#00FF00]/20 text-[#00FF00] border border-[#00FF00]/50'
                             : 'bg-red-500/20 text-red-400 border border-red-500/50'
-                        }`}>
+                          }`}>
                           {t.type}
                         </span>
                       </td>
@@ -533,11 +531,10 @@ const AdminTransactions = () => {
                       </span>
                       <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">{t.category}</h4>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold ${
-                      t.type === 'Income'
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold ${t.type === 'Income'
                         ? 'bg-[#00FF00]/20 text-[#00FF00] border border-[#00FF00]/50'
                         : 'bg-red-500/20 text-red-400 border border-red-500/50'
-                    }`}>
+                      }`}>
                       {t.type}
                     </span>
                   </div>
