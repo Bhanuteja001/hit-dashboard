@@ -65,6 +65,13 @@ const AdminTransactions = () => {
   const [serverError, setServerError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, label }
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedFilterProjectId, setSelectedFilterProjectId] = useState('');
+
+  const canEdit = (t) => {
+    if (!user || !user.name) return false;
+    const tAddedBy = t.addedBy || 'Default Admin';
+    return tAddedBy.trim().toLowerCase() === user.name.trim().toLowerCase();
+  };
 
   const {
     register,
@@ -154,15 +161,19 @@ const AdminTransactions = () => {
   }, []);
 
   // ── Pagination ─────────────────────────────────────────────────────────────
-  const totalPages = Math.ceil(transactions.length / PAGE_SIZE);
-  const paginated = transactions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const filteredTransactions = selectedFilterProjectId
+    ? transactions.filter((t) => t.projectId === selectedFilterProjectId)
+    : transactions;
+
+  const totalPages = Math.ceil(filteredTransactions.length / PAGE_SIZE);
+  const paginated = filteredTransactions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  useEffect(() => { setCurrentPage(1); }, [transactions.length]);
+  useEffect(() => { setCurrentPage(1); }, [filteredTransactions.length]);
 
   // ── Add / Edit ─────────────────────────────────────────────────────────────
   const handleAdd = () => {
@@ -180,6 +191,10 @@ const AdminTransactions = () => {
   };
 
   const handleEdit = (transaction) => {
+    if (!canEdit(transaction)) {
+      toast.error('You do not have permission to edit this transaction');
+      return;
+    }
     setEditingTransaction(transaction.id);
     setServerError('');
     reset({
@@ -195,6 +210,10 @@ const AdminTransactions = () => {
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   const handleDeleteClick = (transaction) => {
+    if (!canEdit(transaction)) {
+      toast.error('You do not have permission to delete this transaction');
+      return;
+    }
     setDeleteTarget({
       id: transaction.id,
       label: `${transaction.category} — ₹${Number(transaction.amount).toLocaleString('en-IN')}`,
@@ -261,6 +280,44 @@ const AdminTransactions = () => {
           Add New Transaction
         </button>
       </header>
+
+      {/* ── Filters Section ─────────────────────────────────────────────────── */}
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0f1a2e] p-4 rounded-xl border border-gray-800">
+        <div className="w-full sm:w-72">
+          <label htmlFor="project-filter" className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Filter by Project ID
+          </label>
+          <div className="relative">
+            <select
+              id="project-filter"
+              value={selectedFilterProjectId}
+              onChange={(e) => setSelectedFilterProjectId(e.target.value)}
+              className="w-full border border-gray-700 rounded-lg py-2 px-3 bg-[#020B1A] text-white focus:outline-none focus:ring-2 focus:ring-[#AED500] focus:border-transparent transition-all text-sm appearance-none cursor-pointer pr-10"
+            >
+              <option value="">All Projects</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.projectId}>
+                  {p.projectId} — {p.clientName}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {selectedFilterProjectId && (
+          <button
+            onClick={() => setSelectedFilterProjectId('')}
+            className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1 mt-auto py-2 px-3 bg-gray-800/50 hover:bg-gray-800 rounded-md cursor-pointer border border-gray-700/50"
+          >
+            Clear Filter
+          </button>
+        )}
+      </div>
 
       {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
       {deleteTarget && (
@@ -470,24 +527,35 @@ const AdminTransactions = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleEdit(t)}
-                            className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors cursor-pointer"
-                            title="Edit"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(t)}
-                            className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-md transition-colors cursor-pointer"
-                            title="Delete"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          {canEdit(t) ? (
+                            <>
+                              <button
+                                onClick={() => handleEdit(t)}
+                                className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors cursor-pointer"
+                                title="Edit"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteClick(t)}
+                                className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-md transition-colors cursor-pointer"
+                                title="Delete"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-gray-500 flex items-center gap-1 text-xs bg-gray-800/40 py-1 px-2 rounded border border-gray-800 cursor-not-allowed select-none" title="Locked: Created by another admin">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                              </svg>
+                              Locked
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -510,7 +578,7 @@ const AdminTransactions = () => {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
-            totalItems={transactions.length}
+            totalItems={filteredTransactions.length}
             pageSize={PAGE_SIZE}
             itemName="transactions"
           />
@@ -574,26 +642,35 @@ const AdminTransactions = () => {
                     )}
                   </div>
 
-                  <div className="flex gap-2.5">
-                    <button
-                      onClick={() => handleEdit(t)}
-                      className="flex-1 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-semibold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  {canEdit(t) ? (
+                    <div className="flex gap-2.5">
+                      <button
+                        onClick={() => handleEdit(t)}
+                        className="flex-1 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-semibold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(t)}
+                        className="flex-1 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full py-2 bg-gray-800/40 text-gray-500 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-800/60 select-none cursor-not-allowed">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                       </svg>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(t)}
-                      className="flex-1 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete
-                    </button>
-                  </div>
+                      Locked: Created by another admin
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -612,7 +689,7 @@ const AdminTransactions = () => {
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
-                totalItems={transactions.length}
+                totalItems={filteredTransactions.length}
                 pageSize={PAGE_SIZE}
                 itemName="transactions"
               />
