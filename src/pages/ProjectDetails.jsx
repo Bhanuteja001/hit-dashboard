@@ -117,7 +117,7 @@ const ProjectDetails = () => {
 
   const totalCredit = creditTxns.reduce((sum, t) => sum + (t.amount || 0), 0);
   const totalDebit = debitTxns.reduce((sum, t) => sum + (t.amount || 0), 0);
-  
+
   const projectCost = Number(project.budget) || 0;
   const netProfit = totalCredit - totalDebit;
   const remainingBudget = projectCost - totalCredit;
@@ -126,14 +126,14 @@ const ProjectDetails = () => {
   // Get all unique admin names from transactions as a fallback
   const getAdminsList = () => {
     let list = [...admins];
-    
+
     const txnAdminNames = new Set();
     transactions.forEach(t => {
       if (t.addedBy) {
         txnAdminNames.add(t.addedBy);
       }
     });
-    
+
     txnAdminNames.forEach(name => {
       const exists = list.some(u => u.name.toLowerCase() === name.toLowerCase());
       if (!exists) {
@@ -144,11 +144,11 @@ const ProjectDetails = () => {
         });
       }
     });
-    
+
     if (list.length === 0) {
       list.push({ name: 'Default Admin', role: 'admin', createdAt: new Date(0) });
     }
-    
+
     const uniqueList = [];
     const seen = new Set();
     list.forEach(u => {
@@ -158,14 +158,14 @@ const ProjectDetails = () => {
         uniqueList.push(u);
       }
     });
-    
+
     return uniqueList.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   };
 
   const finalAdmins = getAdminsList();
   const numAdmins = finalAdmins.length;
-  
-  // Calculate total spent per admin
+
+  // Calculate total spent and received per admin
   const adminSpents = finalAdmins.map(admin => {
     const spent = debitTxns
       .filter(t => {
@@ -174,23 +174,37 @@ const ProjectDetails = () => {
         return txnAddedBy === adminName || (adminName === 'default admin' && txnAddedBy.includes('default admin'));
       })
       .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    const received = creditTxns
+      .filter(t => {
+        const txnAddedBy = (t.addedBy || 'Default Admin').toLowerCase();
+        const adminName = admin.name.toLowerCase();
+        return txnAddedBy === adminName || (adminName === 'default admin' && txnAddedBy.includes('default admin'));
+      })
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
     return {
       admin,
-      spent
+      spent,
+      received
     };
   });
-  
+
   const projectStatus = project.endDate ? 'Completed' : 'Pending';
   const baseShare = projectStatus === 'Completed' ? (netProfit / numAdmins) : 0;
   const totalAdminSpents = adminSpents.reduce((sum, item) => sum + item.spent, 0);
   const avgSpent = totalAdminSpents / numAdmins;
-  
+
   const adminProfitShares = adminSpents.map(item => {
     const spentDev = item.spent - avgSpent;
-    const finalShare = baseShare + spentDev;
+    const finalShare = projectStatus === 'Pending'
+      ? (item.received - item.spent)
+      : (baseShare + spentDev);
+
     return {
       admin: item.admin,
       spent: item.spent,
+      received: item.received,
       baseShare,
       adjustment: spentDev,
       finalShare
@@ -231,7 +245,7 @@ const ProjectDetails = () => {
   return (
     <div className="min-h-screen bg-[#020B1A] text-white font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
-        
+
         {/* Navigation & Header */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-800 pb-6">
           <div className="space-y-2">
@@ -249,11 +263,10 @@ const ProjectDetails = () => {
               <span className="text-sm font-bold text-[#AED500] bg-[#AED500]/10 border border-[#AED500]/25 px-2.5 py-1 rounded-md">
                 {project.projectRefId}
               </span>
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${
-                projectStatus === 'Completed'
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${projectStatus === 'Completed'
                   ? 'bg-[#00FF00]/10 text-[#00FF00] border border-[#00FF00]/30'
                   : 'bg-[#FF9900]/10 text-[#FF9900] border border-[#FF9900]/30'
-              }`}>
+                }`}>
                 {projectStatus}
               </span>
             </div>
@@ -344,17 +357,17 @@ const ProjectDetails = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {adminProfitShares.map(({ admin, spent, baseShare, adjustment, finalShare }, idx) => {
+            {adminProfitShares.map(({ admin, spent, received, baseShare, adjustment, finalShare }, idx) => {
               const isFinalProfit = finalShare >= 0;
               const isAdjustmentPositive = adjustment >= 0;
               return (
-                <div 
-                  key={admin.name} 
+                <div
+                  key={admin.name}
                   className={`bg-[#020B1A]/40 border rounded-2xl p-5 hover:border-gray-700 transition-all space-y-4 relative overflow-hidden group`}
                 >
                   {/* Background Glow */}
                   <div className={`absolute top-0 right-0 w-24 h-24 rounded-full filter blur-3xl opacity-10 -mr-8 -mt-8 transition-all duration-300 group-hover:scale-125 ${isFinalProfit ? 'bg-[#AED500]' : 'bg-red-500'}`} />
-                  
+
                   {/* Header */}
                   <div className="flex justify-between items-start border-b border-gray-800/60 pb-3">
                     <div>
@@ -362,36 +375,58 @@ const ProjectDetails = () => {
                       <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">{formatAddedBy(admin.name)}</h4>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${isFinalProfit ? 'bg-[#00FF00]/10 text-[#00FF00] border border-[#00FF00]/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
-                      {isFinalProfit ? 'PROFIT SHARE' : 'LOSS SHARE'}
+                      {projectStatus === 'Pending'
+                        ? (isFinalProfit ? 'SURPLUS' : 'DEFICIT')
+                        : (isFinalProfit ? 'PROFIT SHARE' : 'LOSS SHARE')}
                     </span>
                   </div>
 
                   {/* Calculations breakdown */}
                   <div className="space-y-2.5 text-xs text-gray-400">
-                    <div className="flex justify-between items-center">
-                      <span>Equal Base Share:</span>
-                      <span className="font-semibold text-gray-200">
-                        {baseShare >= 0 ? '' : '-'}₹{Math.abs(Math.round(baseShare)).toLocaleString('en-IN')}
-                        {projectStatus === 'Pending' && <span className="text-[10px] text-gray-500 font-normal ml-1">(At End of Project)</span>}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Individual Spent:</span>
-                      <span className="font-semibold text-gray-200">₹{Math.round(spent).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-gray-800/40 pb-2.5">
-                      <span>Spent Adjustment:</span>
-                      <span className={`font-semibold flex items-center gap-1 ${isAdjustmentPositive ? 'text-[#00FF00]' : 'text-red-400'}`}>
-                        {isAdjustmentPositive ? '+' : '-'}₹{Math.abs(Math.round(adjustment)).toLocaleString('en-IN')}
-                        <span className="text-[9px] text-gray-500 font-normal">({isAdjustmentPositive ? 'spent more' : 'spent less'})</span>
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1.5">
-                      <span className="text-sm font-bold text-white">Final Share:</span>
-                      <span className={`text-base font-extrabold ${isFinalProfit ? 'text-[#00FF00]' : 'text-red-400'}`}>
-                        {isFinalProfit ? '+' : ''}₹{Math.round(finalShare).toLocaleString('en-IN')}
-                      </span>
-                    </div>
+                    {projectStatus === 'Pending' ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span>Individual Received:</span>
+                          <span className="font-semibold text-gray-200">₹{Math.round(received).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-gray-800/40 pb-2.5">
+                          <span>Individual Spent:</span>
+                          <span className="font-semibold text-gray-200">₹{Math.round(spent).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1.5">
+                          <span className="text-sm font-bold text-white">Final Balance:</span>
+                          <span className={`text-base font-extrabold ${isFinalProfit ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                            {isFinalProfit ? '+' : ''}₹{Math.round(finalShare).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span>Equal Base Share:</span>
+                          <span className="font-semibold text-gray-200">
+                            {baseShare >= 0 ? '' : '-'}₹{Math.abs(Math.round(baseShare)).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Individual Spent:</span>
+                          <span className="font-semibold text-gray-200">₹{Math.round(spent).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-gray-800/40 pb-2.5">
+                          <span>Spent Adjustment:</span>
+                          <span className={`font-semibold flex items-center gap-1 ${isAdjustmentPositive ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                            {isAdjustmentPositive ? '+' : '-'}₹{Math.abs(Math.round(adjustment)).toLocaleString('en-IN')}
+                            <span className="text-[9px] text-gray-500 font-normal">({isAdjustmentPositive ? 'spent more' : 'spent less'})</span>
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1.5">
+                          <span className="text-sm font-bold text-white">Final Share:</span>
+                          <span className={`text-base font-extrabold ${isFinalProfit ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                            {isFinalProfit ? '+' : ''}₹{Math.round(finalShare).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -549,7 +584,7 @@ const ProjectDetails = () => {
 
         {/* Transactions Ledgers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
+
           {/* Credit Ledger (Income) */}
           <div className="bg-[#0f1a2e] border border-gray-800 rounded-2xl p-6 shadow-sm overflow-hidden flex flex-col">
             <h3 className="text-base sm:text-lg font-bold text-white mb-4 pb-2 border-b border-gray-800/80 flex items-center justify-between">
@@ -561,7 +596,7 @@ const ProjectDetails = () => {
                 ₹{totalCredit.toLocaleString('en-IN')}
               </span>
             </h3>
-            
+
             <div className="overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
                 <thead>
@@ -611,7 +646,7 @@ const ProjectDetails = () => {
                 ₹{totalDebit.toLocaleString('en-IN')}
               </span>
             </h3>
-            
+
             <div className="overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
                 <thead>
@@ -649,7 +684,7 @@ const ProjectDetails = () => {
               </table>
             </div>
           </div>
-          
+
         </div>
       </div>
     </div>
