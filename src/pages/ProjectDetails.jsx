@@ -180,7 +180,8 @@ const ProjectDetails = () => {
     };
   });
   
-  const baseShare = netProfit / numAdmins;
+  const projectStatus = project.endDate ? 'Completed' : 'Pending';
+  const baseShare = projectStatus === 'Completed' ? (netProfit / numAdmins) : 0;
   const totalAdminSpents = adminSpents.reduce((sum, item) => sum + item.spent, 0);
   const avgSpent = totalAdminSpents / numAdmins;
   
@@ -226,8 +227,6 @@ const ProjectDetails = () => {
     if (isNaN(d)) return dateStr;
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
-
-  const projectStatus = project.endDate ? 'Completed' : 'Pending';
 
   return (
     <div className="min-h-screen bg-[#020B1A] text-white font-sans p-4 sm:p-6 lg:p-8">
@@ -373,6 +372,7 @@ const ProjectDetails = () => {
                       <span>Equal Base Share:</span>
                       <span className="font-semibold text-gray-200">
                         {baseShare >= 0 ? '' : '-'}₹{Math.abs(Math.round(baseShare)).toLocaleString('en-IN')}
+                        {projectStatus === 'Pending' && <span className="text-[10px] text-gray-500 font-normal ml-1">(At End of Project)</span>}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
