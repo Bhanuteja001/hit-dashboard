@@ -196,10 +196,14 @@ const ProjectDetails = () => {
   const avgSpent = totalAdminSpents / numAdmins;
 
   const adminProfitShares = adminSpents.map(item => {
+    const currentBalance = item.received - item.spent;
     const spentDev = item.spent - avgSpent;
+    const targetProfitShare = baseShare; // targetProfitShare is baseShare (netProfit / numAdmins)
+    const settlementAdjustment = targetProfitShare - currentBalance;
+
     const finalShare = projectStatus === 'Pending'
-      ? (item.received - item.spent)
-      : (baseShare + spentDev);
+      ? currentBalance
+      : targetProfitShare;
 
     return {
       admin: item.admin,
@@ -207,6 +211,7 @@ const ProjectDetails = () => {
       received: item.received,
       baseShare,
       adjustment: spentDev,
+      settlementAdjustment,
       finalShare
     };
   });
@@ -357,9 +362,29 @@ const ProjectDetails = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {adminProfitShares.map(({ admin, spent, received, baseShare, adjustment, finalShare }, idx) => {
+            {adminProfitShares.map(({ admin, spent, received, baseShare, adjustment, settlementAdjustment, finalShare }, idx) => {
               const isFinalProfit = finalShare >= 0;
               const isAdjustmentPositive = adjustment >= 0;
+              const isSettlementPositive = settlementAdjustment >= 0;
+
+              // Find other admin's name for 2-admin layout
+              let settlementLabel = '';
+              if (numAdmins === 2) {
+                const otherAdmin = adminProfitShares.find(x => x.admin.name !== admin.name);
+                const otherName = otherAdmin ? otherAdmin.admin.name : 'other admin';
+                if (settlementAdjustment > 0) {
+                  settlementLabel = `receive from ${otherName}`;
+                } else if (settlementAdjustment < 0) {
+                  settlementLabel = `transfer to ${otherName}`;
+                }
+              } else {
+                if (settlementAdjustment > 0) {
+                  settlementLabel = 'receive from others';
+                } else if (settlementAdjustment < 0) {
+                  settlementLabel = 'transfer to others';
+                }
+              }
+
               return (
                 <div
                   key={admin.name}
@@ -403,24 +428,22 @@ const ProjectDetails = () => {
                     ) : (
                       <>
                         <div className="flex justify-between items-center">
-                          <span>Equal Base Share:</span>
-                          <span className="font-semibold text-gray-200">
-                            {baseShare >= 0 ? '' : '-'}₹{Math.abs(Math.round(baseShare)).toLocaleString('en-IN')}
-                          </span>
+                          <span>Individual Received:</span>
+                          <span className="font-semibold text-gray-200">₹{Math.round(received).toLocaleString('en-IN')}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span>Individual Spent:</span>
                           <span className="font-semibold text-gray-200">₹{Math.round(spent).toLocaleString('en-IN')}</span>
                         </div>
                         <div className="flex justify-between items-center border-b border-gray-800/40 pb-2.5">
-                          <span>Spent Adjustment:</span>
-                          <span className={`font-semibold flex items-center gap-1 ${isAdjustmentPositive ? 'text-[#00FF00]' : 'text-red-400'}`}>
-                            {isAdjustmentPositive ? '+' : '-'}₹{Math.abs(Math.round(adjustment)).toLocaleString('en-IN')}
-                            <span className="text-[9px] text-gray-500 font-normal">({isAdjustmentPositive ? 'spent more' : 'spent less'})</span>
+                          <span>Settlement Adjustment:</span>
+                          <span className={`font-semibold flex items-center gap-1 ${isSettlementPositive ? 'text-[#00FF00]' : 'text-red-400'}`}>
+                            {isSettlementPositive ? '+' : '-'}₹{Math.abs(Math.round(settlementAdjustment)).toLocaleString('en-IN')}
+                            {settlementLabel && <span className="text-[9px] text-gray-500 font-normal">({settlementLabel})</span>}
                           </span>
                         </div>
                         <div className="flex justify-between items-center pt-1.5">
-                          <span className="text-sm font-bold text-white">Final Share:</span>
+                          <span className="text-sm font-bold text-white">{isFinalProfit ? 'Final Profit Share:' : 'Final Loss Share:'}</span>
                           <span className={`text-base font-extrabold ${isFinalProfit ? 'text-[#00FF00]' : 'text-red-400'}`}>
                             {isFinalProfit ? '+' : ''}₹{Math.round(finalShare).toLocaleString('en-IN')}
                           </span>
