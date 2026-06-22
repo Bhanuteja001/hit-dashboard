@@ -21,9 +21,12 @@ const ProjectSchema = z
     clientPhone:        z
       .string()
       .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid mobile number (10-15 digits)'),
+    clientEmail:        z.string().email('Enter a valid email address'),
+    agreementAmount:    z.string().min(1, 'Agreement amount is required'),
+    quotationAmount:    z.string().min(1, 'Quotation amount is required'),
     location:           z.string().min(1, 'Location is required'),
     area:               z.string().min(1, 'Area is required'),
-    budget:             z.string().min(1, 'Budget is required'),
+    budget:             z.string().min(1, 'Project cost (budget) is required'),
     startDate:          z.string().min(1, 'Start date is required'),
     endDate:            z.string().optional(),
     projectDescription: z.string().optional(),
@@ -80,7 +83,8 @@ const AdminProjects = () => {
   } = useForm({
     resolver: zodResolver(ProjectSchema),
     defaultValues: {
-      projectName: '', clientName: '', clientPhone: '',
+      projectName: '', clientName: '', clientPhone: '', clientEmail: '',
+      agreementAmount: '', quotationAmount: '',
       location: '', area: '', budget: '',
       startDate: '', endDate: '', projectDescription: '',
     },
@@ -126,6 +130,9 @@ const AdminProjects = () => {
           projectName: p.projectName,
           clientName: p.clientName,
           clientPhone: p.clientMobile,
+          clientEmail: p.clientEmail || '',
+          agreementAmount: p.agreementAmount || '',
+          quotationAmount: p.quotationAmount || '',
           location: p.location,
           area: p.area,
           cost: p.budget,
@@ -175,7 +182,8 @@ const AdminProjects = () => {
     setEditingProject(null);
     setServerError('');
     reset({
-      projectName: '', clientName: '', clientPhone: '',
+      projectName: '', clientName: '', clientPhone: '', clientEmail: '',
+      agreementAmount: '', quotationAmount: '',
       location: '', area: '', budget: '',
       startDate: '', endDate: '', projectDescription: '',
     });
@@ -189,6 +197,9 @@ const AdminProjects = () => {
       projectName:        project.projectName  || '',
       clientName:         project.clientName   || '',
       clientPhone:        project.clientPhone  || '',
+      clientEmail:        project.clientEmail  || '',
+      agreementAmount:    String(project.agreementAmount || ''),
+      quotationAmount:    String(project.quotationAmount || ''),
       location:           project.location     || '',
       area:               project.area         || '',
       budget:             String(project.cost  || ''),
@@ -230,6 +241,9 @@ const AdminProjects = () => {
       projectRefId,
       clientName:         data.clientName,
       clientMobile:       data.clientPhone,
+      clientEmail:        data.clientEmail,
+      agreementAmount:    data.agreementAmount,
+      quotationAmount:    data.quotationAmount,
       location:           data.location,
       area:               data.area,
       budget:             data.budget,
@@ -340,6 +354,27 @@ const AdminProjects = () => {
                   <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Client Phone *</label>
                   <input {...register('clientPhone')} className={inputCls(errors.clientPhone)} placeholder="+91XXXXXXXXXX" />
                   <FieldError message={errors.clientPhone?.message} />
+                </div>
+
+                {/* Client Email */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Client Email *</label>
+                  <input type="email" {...register('clientEmail')} className={inputCls(errors.clientEmail)} placeholder="client@example.com" />
+                  <FieldError message={errors.clientEmail?.message} />
+                </div>
+
+                {/* Quotation Amount */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Quotation Amount *</label>
+                  <input {...register('quotationAmount')} className={inputCls(errors.quotationAmount)} placeholder="e.g. 550000" />
+                  <FieldError message={errors.quotationAmount?.message} />
+                </div>
+
+                {/* Agreement Amount */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Agreement Amount *</label>
+                  <input {...register('agreementAmount')} className={inputCls(errors.agreementAmount)} placeholder="e.g. 500000" />
+                  <FieldError message={errors.agreementAmount?.message} />
                 </div>
 
                 {/* Location */}

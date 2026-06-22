@@ -577,12 +577,28 @@ const ProjectDetails = () => {
               <span className="text-white font-medium text-base">{project.clientMobile}</span>
             </div>
             <div>
+              <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Client Email</span>
+              <span className="text-white font-medium text-base">{project.clientEmail || '-'}</span>
+            </div>
+            <div>
               <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Location</span>
               <span className="text-white font-medium text-base">{project.location}</span>
             </div>
             <div>
               <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Area (sft)</span>
               <span className="text-white font-medium text-base">{project.area || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Quotation Amount</span>
+              <span className="text-white font-medium text-base">
+                {project.quotationAmount ? `₹${Number(project.quotationAmount).toLocaleString('en-IN')}` : '-'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Agreement Amount</span>
+              <span className="text-white font-medium text-base">
+                {project.agreementAmount ? `₹${Number(project.agreementAmount).toLocaleString('en-IN')}` : '-'}
+              </span>
             </div>
             <div>
               <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Start Date</span>
