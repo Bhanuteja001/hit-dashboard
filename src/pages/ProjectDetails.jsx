@@ -595,12 +595,6 @@ const ProjectDetails = () => {
               </span>
             </div>
             <div>
-              <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Agreement Amount</span>
-              <span className="text-white font-medium text-base">
-                {project.agreementAmount ? `₹${Number(project.agreementAmount).toLocaleString('en-IN')}` : '-'}
-              </span>
-            </div>
-            <div>
               <span className="text-gray-400 block text-xs uppercase font-semibold mb-1">Start Date</span>
               <span className="text-white font-medium text-base">{formatDate(project.startDate)}</span>
             </div>

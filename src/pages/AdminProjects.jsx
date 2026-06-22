@@ -22,7 +22,6 @@ const ProjectSchema = z
       .string()
       .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid mobile number (10-15 digits)'),
     clientEmail:        z.string().email('Enter a valid email address'),
-    agreementAmount:    z.string().min(1, 'Agreement amount is required'),
     quotationAmount:    z.string().min(1, 'Quotation amount is required'),
     location:           z.string().min(1, 'Location is required'),
     area:               z.string().min(1, 'Area is required'),
@@ -84,7 +83,7 @@ const AdminProjects = () => {
     resolver: zodResolver(ProjectSchema),
     defaultValues: {
       projectName: '', clientName: '', clientPhone: '', clientEmail: '',
-      agreementAmount: '', quotationAmount: '',
+      quotationAmount: '',
       location: '', area: '', budget: '',
       startDate: '', endDate: '', projectDescription: '',
     },
@@ -131,7 +130,6 @@ const AdminProjects = () => {
           clientName: p.clientName,
           clientPhone: p.clientMobile,
           clientEmail: p.clientEmail || '',
-          agreementAmount: p.agreementAmount || '',
           quotationAmount: p.quotationAmount || '',
           location: p.location,
           area: p.area,
@@ -183,7 +181,7 @@ const AdminProjects = () => {
     setServerError('');
     reset({
       projectName: '', clientName: '', clientPhone: '', clientEmail: '',
-      agreementAmount: '', quotationAmount: '',
+      quotationAmount: '',
       location: '', area: '', budget: '',
       startDate: '', endDate: '', projectDescription: '',
     });
@@ -198,7 +196,6 @@ const AdminProjects = () => {
       clientName:         project.clientName   || '',
       clientPhone:        project.clientPhone  || '',
       clientEmail:        project.clientEmail  || '',
-      agreementAmount:    String(project.agreementAmount || ''),
       quotationAmount:    String(project.quotationAmount || ''),
       location:           project.location     || '',
       area:               project.area         || '',
@@ -242,7 +239,6 @@ const AdminProjects = () => {
       clientName:         data.clientName,
       clientMobile:       data.clientPhone,
       clientEmail:        data.clientEmail,
-      agreementAmount:    data.agreementAmount,
       quotationAmount:    data.quotationAmount,
       location:           data.location,
       area:               data.area,
@@ -368,13 +364,6 @@ const AdminProjects = () => {
                   <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Quotation Amount *</label>
                   <input {...register('quotationAmount')} className={inputCls(errors.quotationAmount)} placeholder="e.g. 550000" />
                   <FieldError message={errors.quotationAmount?.message} />
-                </div>
-
-                {/* Agreement Amount */}
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-1.5 sm:mb-2">Agreement Amount *</label>
-                  <input {...register('agreementAmount')} className={inputCls(errors.agreementAmount)} placeholder="e.g. 500000" />
-                  <FieldError message={errors.agreementAmount?.message} />
                 </div>
 
                 {/* Location */}
